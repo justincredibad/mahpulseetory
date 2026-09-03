@@ -933,6 +933,11 @@
 
   // Expected-value chain, computed bottom-up so a jackpot at any tier
   // (e.g. Raw landing on Advanced directly) reduces the tiers above it.
+  // The Raw tier, like Basic and Intermediate, batches 10 units per
+  // attempt -- but unlike them it has no fail/refund branch (toBasic +
+  // toIntermediate + toAdvanced already sum to 1), so every attempt just
+  // burns all 10 and produces exactly 1 output unit at the tier the roll
+  // lands on. That's why its divisor is a flat 10, not (10 - 9*fail).
   function computeExpectedQuantities(odds) {
     var d = odds.intermediate.toAdvanced, e = odds.intermediate.fail;
     var advPerIntermediate = d / (10 - 9 * e);
@@ -941,7 +946,7 @@
     var advPerBasic = (b + a * advPerIntermediate) / (10 - 9 * c);
 
     var pB = odds.raw.toBasic, pI = odds.raw.toIntermediate, pA = odds.raw.toAdvanced;
-    var advPerOre = pA + pI * advPerIntermediate + pB * advPerBasic;
+    var advPerOre = (pA + pI * advPerIntermediate + pB * advPerBasic) / 10;
 
     return {
       ore: 1 / advPerOre,
@@ -952,15 +957,18 @@
   }
 
   // Each crafting attempt costs mesos on top of materials -- charged
-  // whether it succeeds or fails. Named by the tier the action targets:
-  // "basic" = refining 1 Raw Ore (produces Basic most often), "intermediate"
-  // = a 10-Basic combine attempt, "advanced" = a 10-Intermediate combine
-  // attempt. Same fees for both odds tables (not stated otherwise).
+  // whether it succeeds or fails. Keyed by the tier the attempt consumes
+  // (10 units of): "raw" = a 10-Raw combine attempt (89% 1 Basic, 9% skips
+  // to 1 Intermediate, 2% jackpots to 1 Advanced -- always fully consumed,
+  // no refund), "basic" = a 10-Basic combine attempt, "intermediate" = a
+  // 10-Intermediate combine attempt. Same fees for both odds tables (not
+  // stated otherwise).
   var CRYSTAL_FEES = { raw: 110000, basic: 330000, intermediate: 550000 };
 
   // Fee cost amortized per unit of material consumed, cascading downward
   // (a unit that jackpots or fails still needs its downstream fees paid
-  // eventually) -- same recursive shape as computeExpectedQuantities.
+  // eventually) -- same recursive shape as computeExpectedQuantities,
+  // including the flat /10 divisor for the no-fail Raw tier.
   function computeAmortizedFees(odds) {
     var e = odds.intermediate.fail;
     var perIntermediateUnit = CRYSTAL_FEES.intermediate / (10 - 9 * e);
@@ -969,7 +977,7 @@
     var perBasicUnit = (CRYSTAL_FEES.basic + a * perIntermediateUnit) / (10 - 9 * c);
 
     var pB = odds.raw.toBasic, pI = odds.raw.toIntermediate;
-    var perOreUnit = CRYSTAL_FEES.raw + pB * perBasicUnit + pI * perIntermediateUnit;
+    var perOreUnit = (CRYSTAL_FEES.raw + pB * perBasicUnit + pI * perIntermediateUnit) / 10;
 
     return { ore: perOreUnit, basic: perBasicUnit, intermediate: perIntermediateUnit, advanced: 0 };
   }
