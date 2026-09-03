@@ -754,7 +754,7 @@
 
   <section class="crystal card">
     <h2>Crystal Crafting</h2>
-    <p class="sub" style="margin-bottom: 4px;">Seven refining chains. Ore is a flat, guaranteed craft &mdash; 10 Ore plus a fixed mesos fee makes 1 Raw (not separately traded, so its cost is always derived from Ore). From Raw onward every tier is a probabilistic craft, not a fixed exchange &mdash; refining Raw can land on Basic, Intermediate, or (rarely) Advanced directly; combining 10 of a tier can partially fail (9 back) or jackpot straight to Advanced. Every craft attempt also costs a flat mesos fee whether it succeeds or fails, included below. Quantities and costs are expected values over those odds, not guarantees &mdash; actual luck on any one attempt run can differ a lot.</p>
+    <p class="sub" style="margin-bottom: 4px;">Seven refining chains, priced off Ore only &mdash; Basic/Intermediate market prices rest on n=1-2 sales each and aren't real listings you'll ever see, so they're excluded from the recommended route. Ore is a flat, guaranteed craft &mdash; 10 Ore plus a fixed mesos fee makes 1 Raw (not separately traded, so its cost is always derived from Ore). From Raw onward every tier is a probabilistic craft, not a fixed exchange &mdash; refining Raw can land on Basic, Intermediate, or (rarely) Advanced directly; combining 10 of a tier can partially fail (9 back) or jackpot straight to Advanced. Every craft attempt also costs a flat mesos fee whether it succeeds or fails, included below. Quantities and costs are expected values over those odds, not guarantees &mdash; actual luck on any one attempt run can differ a lot.</p>
 
     <div class="subsection">
       <div class="subsection-head">
@@ -1573,10 +1573,24 @@
     });
   }
 
+  // Only Ore and Advanced tiers are ever shown -- Basic/Intermediate prices
+  // rest on n=1-2 sales and aren't real listings you can act on, and craft
+  // routes now only consider Ore (see renderCrystalTable).
+  var CRYSTAL_VISIBLE_NAMES = (function () {
+    var set = {};
+    CRYSTAL_CHAINS.forEach(function (chain) {
+      set[chain.ore] = true;
+      set[chain.advanced] = true;
+    });
+    return set;
+  })();
+
   function renderCrystalPriceGrid() {
     var grid = document.getElementById("crystalPriceGrid");
     grid.innerHTML = "";
-    var names = Object.keys(DEFAULT_CRYSTAL_PRICES);
+    var names = Object.keys(DEFAULT_CRYSTAL_PRICES).filter(function (name) {
+      return CRYSTAL_VISIBLE_NAMES[name];
+    });
     names.forEach(function (name) {
       var field = document.createElement("div");
       field.className = "price-field";
@@ -1671,7 +1685,11 @@
         return;
       }
 
-      var craftRoutes = ["ore", "basic", "intermediate"]
+      // Basic/Intermediate routes are excluded here on purpose -- their
+      // prices rest on n=1-2 sales each, thin enough that you'll basically
+      // never see a real listing to act on. Ore has real volume behind it,
+      // so that's the only craft route actually worth recommending.
+      var craftRoutes = ["ore"]
         .map(function (key) { return { key: key, entry: routeData[key] }; })
         .filter(function (r) { return r.entry !== null; });
 
@@ -1738,7 +1756,7 @@
         var emptyTd2 = document.createElement("td");
         emptyTd2.colSpan = 5;
         emptyTd2.className = "arb-empty";
-        emptyTd2.textContent = "Enter an Ore, Basic, or Intermediate price above to compare crafting routes.";
+        emptyTd2.textContent = "Enter an Ore price above to compare crafting routes.";
         tr.appendChild(emptyTd2);
         body.appendChild(tr);
         return;
