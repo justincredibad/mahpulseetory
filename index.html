@@ -1,0 +1,1763 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>White Scroll Exchange</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Besley:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #ece5d2;
+    --surface: #f6f1e3;
+    --surface-2: #e7dec2;
+    --border: #cabb96;
+    --border-soft: #d9cca6;
+    --text: #2a2318;
+    --text-dim: #6d6350;
+    --accent: #9c6d20;
+    --accent-strong: #7c5518;
+    --accent-ink: #fbf3e1;
+    --accent-2: #2f7566;
+    --danger: #a3402f;
+    --pos: #2f7d4f;
+    --neg: #a3402f;
+    --warn-bg: #f3e2c2;
+    --warn-text: #7c4f16;
+    --shadow: 0 1px 2px rgba(42, 35, 24, 0.06), 0 6px 20px -8px rgba(42, 35, 24, 0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171d;
+      --surface: #1b2029;
+      --surface-2: #242b38;
+      --border: #333c4d;
+      --border-soft: #2a3140;
+      --text: #e7e2d3;
+      --text-dim: #98a1b4;
+      --accent: #d4a65c;
+      --accent-strong: #e8bd7a;
+      --accent-ink: #1b140a;
+      --accent-2: #7cc0ad;
+      --danger: #e08672;
+      --pos: #7cc48f;
+      --neg: #e08672;
+      --warn-bg: #3a2f18;
+      --warn-text: #e8bd7a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -10px rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #14171d;
+    --surface: #1b2029;
+    --surface-2: #242b38;
+    --border: #333c4d;
+    --border-soft: #2a3140;
+    --text: #e7e2d3;
+    --text-dim: #98a1b4;
+    --accent: #d4a65c;
+    --accent-strong: #e8bd7a;
+    --accent-ink: #1b140a;
+    --accent-2: #7cc0ad;
+    --danger: #e08672;
+    --pos: #7cc48f;
+    --neg: #e08672;
+    --warn-bg: #3a2f18;
+    --warn-text: #e8bd7a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px -10px rgba(0, 0, 0, 0.55);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  .masthead {
+    margin-bottom: 36px;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: "Besley", Georgia, serif;
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 42px);
+    line-height: 1.08;
+    margin: 0 0 10px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    font-size: 15px;
+    color: var(--text-dim);
+    max-width: 60ch;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .sub code {
+    font-family: "IBM Plex Mono", monospace;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.92em;
+    color: var(--text);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 28px;
+    margin-bottom: 28px;
+  }
+
+  h2 {
+    font-family: "Besley", Georgia, serif;
+    font-weight: 600;
+    font-size: 19px;
+    margin: 0 0 20px;
+    letter-spacing: -0.005em;
+  }
+
+  /* ---------- Converter ---------- */
+
+  .convert-row {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  #amountInput {
+    width: 110px;
+    flex: 0 0 auto;
+  }
+
+  #fromSelect {
+    flex: 1 1 220px;
+    min-width: 180px;
+  }
+
+  input[type="number"], input[type="text"], select {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 9px;
+    padding: 11px 12px;
+  }
+
+  input[type="text"] {
+    font-family: "Public Sans", sans-serif;
+  }
+
+  select {
+    appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+    background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+    padding-right: 34px;
+  }
+
+  input:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .eq {
+    display: flex;
+    align-items: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    padding: 0 2px;
+  }
+
+  .ws-result {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 9px;
+    padding: 11px 18px;
+    flex: 1 1 220px;
+    min-width: 200px;
+  }
+
+  #wsResultValue {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: 22px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ws-label {
+    font-size: 13px;
+    opacity: 0.85;
+  }
+
+  .also-worth {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .also-worth-label {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    padding: 7px 14px 7px 10px;
+    font-size: 13.5px;
+  }
+
+  .chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .chip .val {
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chip .name {
+    color: var(--text-dim);
+  }
+
+  .empty-note {
+    color: var(--text-dim);
+    font-size: 13.5px;
+  }
+
+  /* ---------- Arbitrage ---------- */
+
+  .subsection {
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .subsection-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .subsection-label {
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  .asof-field {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+
+  .asof-field input {
+    font-size: 12.5px;
+    padding: 5px 9px;
+    width: 130px;
+  }
+
+  .tax-field {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .tax-field input {
+    width: 60px;
+    padding: 6px 9px;
+    font-size: 13px;
+  }
+
+  .price-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+  }
+
+  .price-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 9px;
+    padding: 8px 10px;
+  }
+
+  .price-field .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .price-field label {
+    font-size: 12.5px;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .price-field input {
+    width: 96px;
+    flex: none;
+    padding: 6px 8px;
+    font-size: 13px;
+    background: var(--surface);
+  }
+
+  .price-field input.vol-input {
+    width: 52px;
+    color: var(--text-dim);
+  }
+
+  .strategy-text {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    white-space: normal;
+    min-width: 180px;
+  }
+
+  .pct-cell {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .pct-cell.pos, .num-cell.pos { color: var(--pos); }
+  .pct-cell.neg, .num-cell.neg { color: var(--neg); }
+
+  .outlier-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--warn-bg);
+    color: var(--warn-text);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    padding: 3px 9px 3px 8px;
+    border-radius: 999px;
+    margin-top: 6px;
+    white-space: normal;
+  }
+
+  .arb-empty {
+    color: var(--text-dim);
+    font-size: 13.5px;
+    padding: 6px 0;
+  }
+
+  /* ---------- Crystal crafting ---------- */
+
+  .route-label {
+    font-weight: 500;
+  }
+
+  .route-label.buy-direct {
+    color: var(--accent);
+  }
+
+  tr.buy-direct-row {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+  }
+
+  .cost-cell {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .liquidity-tag {
+    display: block;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .liquidity-tag.thin {
+    color: var(--warn-text);
+  }
+
+  .verdict-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .verdict {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 13.5px;
+    padding: 10px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--border-soft);
+  }
+
+  .verdict .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .verdict-chain {
+    font-weight: 600;
+    flex: none;
+  }
+
+  .verdict-text {
+    color: var(--text-dim);
+  }
+
+  .verdict.craft-wins {
+    background: color-mix(in srgb, var(--pos) 10%, transparent);
+    border-color: color-mix(in srgb, var(--pos) 30%, var(--border-soft));
+  }
+
+  .verdict.buy-wins {
+    background: var(--surface-2);
+  }
+
+  /* ---------- Rate board ---------- */
+
+  .rateboard-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .rateboard-head h2 { margin: 0; }
+
+  .ghost-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    padding: 7px 12px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .ghost-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .ghost-btn.small { font-size: 11px; padding: 5px 10px; margin-top: 18px; }
+
+  #jsonView {
+    background: var(--surface-2);
+    border: 1px solid var(--border-soft);
+    border-radius: 9px;
+    padding: 14px 16px;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    overflow-x: auto;
+    margin: 16px 0 0;
+    user-select: all;
+  }
+
+  .table-scroll {
+    overflow-x: auto;
+    margin-top: 18px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  thead th {
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    font-weight: 500;
+    padding: 0 10px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border-soft);
+    transition: background 0.12s;
+  }
+
+  tbody tr:hover { background: var(--surface-2); }
+
+  tbody td {
+    padding: 12px 10px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .item-cell {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 500;
+  }
+
+  .item-cell .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: none;
+  }
+
+  .ratio-text {
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--text-dim);
+    font-size: 13px;
+    white-space: normal;
+  }
+
+  .rate-note {
+    font-family: "Public Sans", sans-serif;
+    color: var(--text-dim);
+    font-size: 12px;
+    white-space: normal;
+    max-width: 32ch;
+    margin-top: 3px;
+    line-height: 1.4;
+  }
+
+  #newNote {
+    flex: 1 1 260px;
+    min-width: 180px;
+  }
+
+  .num-cell {
+    font-family: "IBM Plex Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+
+  .row-actions {
+    text-align: right;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 13px;
+    padding: 4px 7px;
+    border-radius: 6px;
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  .icon-btn:hover { background: var(--surface-2); color: var(--text); }
+  .icon-btn.danger:hover { color: var(--danger); }
+
+  tr.flash { animation: flash-bg 1.1s ease-out; }
+  @keyframes flash-bg {
+    0% { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+    100% { background: transparent; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    tr.flash { animation: none; }
+  }
+
+  /* ---------- Add form ---------- */
+
+  .add-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  #newItemName { flex: 1 1 220px; min-width: 160px; }
+
+  .add-syntax {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--text-dim);
+  }
+
+  #newItemQty, #newWsQty { width: 84px; }
+
+  .colon { font-size: 15px; }
+
+  .add-form button[type="submit"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    font-family: "IBM Plex Mono", monospace;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 11px 18px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .add-form button[type="submit"]:hover { background: var(--accent-strong); }
+
+  .foot {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12.5px;
+    font-family: "IBM Plex Mono", monospace;
+    margin-top: 8px;
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+
+<div class="page">
+  <header class="masthead">
+    <div class="eyebrow">DreamMS &middot; Barter Economy</div>
+    <h1>White Scroll Exchange</h1>
+    <p class="sub">White Scroll (<code>WS</code>) is the base currency of this economy &mdash; every rate below converts through it. Enter an amount of anything to see what it's worth.</p>
+  </header>
+
+  <section class="converter card">
+    <h2>Convert</h2>
+    <div class="convert-row">
+      <input type="number" id="amountInput" value="1" min="0" step="any" aria-label="Amount">
+      <select id="fromSelect" aria-label="Item"></select>
+      <span class="eq">=</span>
+      <div class="ws-result">
+        <span id="wsResultValue">5</span>
+        <span class="ws-label">White Scrolls</span>
+      </div>
+    </div>
+    <div class="also-worth">
+      <div class="also-worth-label">Also worth</div>
+      <div id="alsoWorthGrid" class="chip-grid"></div>
+    </div>
+  </section>
+
+  <section class="arbitrage card">
+    <h2>Arbitrage</h2>
+    <p class="sub" style="margin-bottom: 4px;">Compares each fixed barter rate against real market prices, both directions, after tax on the sell leg. Prices are typed in, not live &mdash; ask Claude to refresh them, or copy today's numbers from <code>dreamms.gg/stats</code>.</p>
+
+    <div class="subsection">
+      <div class="subsection-head">
+        <span class="subsection-label">Market prices (mesos)</span>
+        <span class="asof-field">
+          as of
+          <input type="text" id="pricesAsOf" placeholder="date">
+        </span>
+      </div>
+      <div id="priceGrid" class="price-grid"></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-head">
+        <span class="subsection-label">Results</span>
+        <span class="tax-field">
+          sell-leg tax
+          <input type="number" id="taxInput" value="2" min="0" max="100" step="any">
+          %
+        </span>
+      </div>
+      <div class="table-scroll">
+        <table id="arbTable">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Volume (7d)</th>
+              <th>Best strategy</th>
+              <th>Buy for</th>
+              <th>Max buy price/unit</th>
+              <th>Profit / cycle</th>
+              <th>Return</th>
+            </tr>
+          </thead>
+          <tbody id="arbBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="crystal card">
+    <h2>Crystal Crafting</h2>
+    <p class="sub" style="margin-bottom: 4px;">Three refining chains. Each tier is a probabilistic craft, not a fixed exchange &mdash; refining Raw Ore can land on Basic, Intermediate, or (rarely) Advanced directly; combining 10 of a tier can partially fail (9 back) or jackpot straight to Advanced. Quantities below are expected values over those odds, not guarantees &mdash; actual luck on any one attempt run can differ a lot.</p>
+
+    <div class="subsection">
+      <div class="subsection-head">
+        <span class="subsection-label">Market prices (mesos)</span>
+      </div>
+      <div id="crystalPriceGrid" class="price-grid"></div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-head">
+        <span class="subsection-label">Results</span>
+      </div>
+      <div class="table-scroll">
+        <table id="crystalTable">
+          <thead>
+            <tr>
+              <th>Route</th>
+              <th>Power Crystal</th>
+              <th>Diamond</th>
+              <th>Black Crystal</th>
+            </tr>
+          </thead>
+          <tbody id="crystalBody"></tbody>
+        </table>
+      </div>
+      <div id="crystalVerdicts" class="verdict-grid"></div>
+    </div>
+  </section>
+
+  <section class="rateboard card">
+    <div class="rateboard-head">
+      <h2>Rate Board</h2>
+      <button id="jsonToggle" class="ghost-btn" type="button">View data</button>
+    </div>
+    <pre id="jsonView" hidden></pre>
+    <div class="table-scroll">
+      <table id="ratesTable">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Ratio</th>
+            <th>WS / unit</th>
+            <th>Units / WS</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ratesBody"></tbody>
+      </table>
+    </div>
+
+    <form id="addForm" class="add-form">
+      <input type="text" id="newItemName" placeholder="Item name" required>
+      <span class="add-syntax">
+        <input type="number" id="newItemQty" placeholder="qty" min="0" step="any" required>
+        <span class="colon">:</span>
+        <input type="number" id="newWsQty" placeholder="WS" min="0" step="any" required>
+      </span>
+      <input type="text" id="newNote" placeholder="Note (optional) — e.g. a combo rule">
+      <button type="submit" id="addBtn">Add rate</button>
+      <button type="button" id="cancelEdit" class="ghost-btn" hidden>Cancel edit</button>
+    </form>
+    <button id="resetBtn" class="ghost-btn small" type="button">Reset to defaults</button>
+  </section>
+
+  <p class="foot">Saved locally in this browser &mdash; private to this device, nothing leaves your machine.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "wsExchangeRates_v1";
+  var WS = "White Scroll";
+
+  var DEFAULT_RATES = [
+    { item: "Tiger Talon", itemQty: 1, wsQty: 5 },
+    { item: "Ssiws Cheese", itemQty: 20, wsQty: 1 },
+    { item: "Eye of Fire", itemQty: 9, wsQty: 1 },
+    { item: "Onyx Apple", itemQty: 7, wsQty: 1 },
+    { item: "Subani's Mystic Cauldron", itemQty: 10, wsQty: 1 },
+    { item: "Naricain's Demon Elixir", itemQty: 7, wsQty: 2 },
+    { item: "Rock of Time", itemQty: 6, wsQty: 11 },
+    { item: "Clean Slate Scroll 10%", itemQty: 9, wsQty: 2, note: "Mixes with the 20% scroll — %-values just need to total 90 per 2 WS" },
+    { item: "Clean Slate Scroll 20%", itemQty: 9, wsQty: 4, note: "Mixes with the 10% scroll — %-values just need to total 90 per 2 WS" }
+  ];
+
+  var PRICES_STORAGE_KEY = "wsExchangePrices_v1";
+  var VOLUMES_STORAGE_KEY = "wsExchangeVolumes_v1";
+  var ASOF_STORAGE_KEY = "wsExchangePricesAsOf_v1";
+  var TAX_STORAGE_KEY = "wsExchangeTax_v1";
+  var SNAPSHOT_STORAGE_KEY = "wsExchangePricesSnapshot_v1";
+  var VOL_SNAPSHOT_STORAGE_KEY = "wsExchangeVolumesSnapshot_v1";
+
+  // Snapshot pulled from dreamms.gg on 2026-09-02 (7-day weighted avg).
+  // Manual on purpose -- the artifact sandbox can't fetch dreamms.gg
+  // directly (CSP), so prices are typed in rather than live.
+  var DEFAULT_PRICES = {
+    "White Scroll": 36836156,
+    "Tiger Talon": 191948371,
+    "Ssiws Cheese": 1615893,
+    "Eye of Fire": 4667275,
+    "Onyx Apple": 5643138,
+    "Subani's Mystic Cauldron": 3533149,
+    "Naricain's Demon Elixir": 9868387,
+    "Rock of Time": 66736324,
+    "Clean Slate Scroll 10%": 7279971,
+    "Clean Slate Scroll 20%": 16480750
+  };
+  // 7-day sales counts (liquidity), same snapshot date as DEFAULT_PRICES.
+  var DEFAULT_VOLUMES = {
+    "White Scroll": 577,
+    "Tiger Talon": 33,
+    "Ssiws Cheese": 107,
+    "Eye of Fire": 114,
+    "Onyx Apple": 213,
+    "Subani's Mystic Cauldron": 266,
+    "Naricain's Demon Elixir": 177,
+    "Rock of Time": 100,
+    "Clean Slate Scroll 10%": 153,
+    "Clean Slate Scroll 20%": 130
+  };
+  var DEFAULT_ASOF = "Sep 3, 2026";
+  var OUTLIER_PCT = 50;
+
+  // Crystal crafting -- a separate mesos-only calculator, no WS involved.
+  // NOT a fixed 10:1 exchange -- it's probabilistic. Refining 1 Raw Ore
+  // lands on Basic/Intermediate/Advanced by chance (sometimes skipping
+  // tiers entirely); combining 10 of a tier can partially fail (9 back)
+  // or jackpot straight to Advanced. Quantities below are the expected
+  // value of a Markov chain over these odds, not a guarantee -- actual
+  // luck on any single attempt sequence can differ a lot, especially
+  // through the Intermediate tier (35% success per attempt).
+  var CRYSTAL_PRICES_STORAGE_KEY = "wsExchangeCrystalPrices_v1";
+  var CRYSTAL_VOLUMES_STORAGE_KEY = "wsExchangeCrystalVolumes_v1";
+  var CRYSTAL_SNAPSHOT_STORAGE_KEY = "wsExchangeCrystalPricesSnapshot_v1";
+  var CRYSTAL_VOL_SNAPSHOT_STORAGE_KEY = "wsExchangeCrystalVolumesSnapshot_v1";
+
+  var CRYSTAL_CHAINS = [
+    { name: "Power Crystal", ore: "Power Crystal Ore", basic: "Basic Power Crystal", intermediate: "Intermediate Power Crystal", advanced: "Advanced Power Crystal" },
+    { name: "Diamond", ore: "Diamond Ore", basic: "Basic Diamond", intermediate: "Intermediate Diamond", advanced: "Advanced Diamond" },
+    { name: "Black Crystal", ore: "Black Crystal Ore", basic: "Basic Black Crystal", intermediate: "Intermediate Black Crystal", advanced: "Advanced Black Crystal" }
+  ];
+
+  // "Crystal" column odds (same table applied to all three chains).
+  // Each group sums to 1 -- mutually exclusive outcomes per attempt.
+  var CRYSTAL_ODDS = {
+    raw: { toBasic: 0.89, toIntermediate: 0.09, toAdvanced: 0.02 },
+    basic: { fail: 0.10, toIntermediate: 0.88, toAdvanced: 0.02 },        // 10 consumed/attempt; fail returns 9
+    intermediate: { fail: 0.65, toAdvanced: 0.35 }                         // 10 consumed/attempt; fail returns 9
+  };
+
+  // Expected-value chain, computed bottom-up so a jackpot at any tier
+  // (e.g. Raw landing on Advanced directly) reduces the tiers above it.
+  function computeExpectedQuantities() {
+    var d = CRYSTAL_ODDS.intermediate.toAdvanced, e = CRYSTAL_ODDS.intermediate.fail;
+    var advPerIntermediate = d / (10 - 9 * e);
+
+    var a = CRYSTAL_ODDS.basic.toIntermediate, b = CRYSTAL_ODDS.basic.toAdvanced, c = CRYSTAL_ODDS.basic.fail;
+    var advPerBasic = (b + a * advPerIntermediate) / (10 - 9 * c);
+
+    var pB = CRYSTAL_ODDS.raw.toBasic, pI = CRYSTAL_ODDS.raw.toIntermediate, pA = CRYSTAL_ODDS.raw.toAdvanced;
+    var advPerOre = pA + pI * advPerIntermediate + pB * advPerBasic;
+
+    return {
+      ore: 1 / advPerOre,
+      basic: 1 / advPerBasic,
+      intermediate: 1 / advPerIntermediate,
+      advanced: 1
+    };
+  }
+
+  var CRYSTAL_EXPECTED_QTY = computeExpectedQuantities();
+  var CRYSTAL_ROUTES = [
+    { key: "ore", qty: CRYSTAL_EXPECTED_QTY.ore, label: fmt(CRYSTAL_EXPECTED_QTY.ore) + "× Ore (expected)" },
+    { key: "basic", qty: CRYSTAL_EXPECTED_QTY.basic, label: fmt(CRYSTAL_EXPECTED_QTY.basic) + "× Basic (expected)" },
+    { key: "intermediate", qty: CRYSTAL_EXPECTED_QTY.intermediate, label: fmt(CRYSTAL_EXPECTED_QTY.intermediate) + "× Intermediate (expected)" },
+    { key: "advanced", qty: 1, label: "Buy Advanced directly" }
+  ];
+  var THIN_VOLUME = 5; // routes priced on fewer than this many 7d sales get flagged
+
+  var DEFAULT_CRYSTAL_PRICES = {
+    "Power Crystal Ore": 139235,
+    "Basic Power Crystal": 685999,
+    "Intermediate Power Crystal": 5114117,
+    "Advanced Power Crystal": 57173039,
+    "Diamond Ore": 8900,
+    "Basic Diamond": 500000,
+    "Intermediate Diamond": 49000,
+    "Advanced Diamond": 2842906,
+    "Black Crystal Ore": 48987,
+    "Basic Black Crystal": 98000,
+    "Intermediate Black Crystal": 4900000,
+    "Advanced Black Crystal": 26472001
+  };
+  var DEFAULT_CRYSTAL_VOLUMES = {
+    "Power Crystal Ore": 28,
+    "Basic Power Crystal": 1,
+    "Intermediate Power Crystal": 5,
+    "Advanced Power Crystal": 139,
+    "Diamond Ore": 5,
+    "Basic Diamond": 1,
+    "Intermediate Diamond": 1,
+    "Advanced Diamond": 53,
+    "Black Crystal Ore": 14,
+    "Basic Black Crystal": 1,
+    "Intermediate Black Crystal": 1,
+    "Advanced Black Crystal": 198
+  };
+
+  var rates = [];
+  var prices = {};
+  var volumes = {};
+  var crystalPrices = {};
+  var crystalVolumes = {};
+  var editingIndex = null;
+
+  function loadRates() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_RATES.slice();
+  }
+
+  // One-time correction: the first published version modeled Clean Slate
+  // Scroll as a single fictional "1%" item. It's actually two real items
+  // (10% and 20%) whose %-values just need to sum to 90 for 2 WS. Anyone
+  // who loaded the old version has the wrong entry saved locally --
+  // swap it for the two correct ones automatically.
+  function migrateCleanSlateScroll() {
+    var idx = rates.findIndex(function (r) { return r.item === "Clean Slate Scroll 1%"; });
+    if (idx === -1) return;
+    rates.splice(idx, 1);
+    if (!rates.some(function (r) { return r.item === "Clean Slate Scroll 10%"; })) {
+      rates.push({ item: "Clean Slate Scroll 10%", itemQty: 9, wsQty: 2, note: "Mixes with the 20% scroll — %-values just need to total 90 per 2 WS" });
+    }
+    if (!rates.some(function (r) { return r.item === "Clean Slate Scroll 20%"; })) {
+      rates.push({ item: "Clean Slate Scroll 20%", itemQty: 9, wsQty: 4, note: "Mixes with the 10% scroll — %-values just need to total 90 per 2 WS" });
+    }
+    saveRates();
+  }
+
+  function saveRates() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rates)); } catch (e) {}
+  }
+
+  function loadPrices() {
+    try {
+      var raw = localStorage.getItem(PRICES_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return Object.assign({}, DEFAULT_PRICES);
+  }
+
+  function savePrices() {
+    try { localStorage.setItem(PRICES_STORAGE_KEY, JSON.stringify(prices)); } catch (e) {}
+  }
+
+  function loadVolumes() {
+    try {
+      var raw = localStorage.getItem(VOLUMES_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return Object.assign({}, DEFAULT_VOLUMES);
+  }
+
+  function saveVolumes() {
+    try { localStorage.setItem(VOLUMES_STORAGE_KEY, JSON.stringify(volumes)); } catch (e) {}
+  }
+
+  function loadCrystalPrices() {
+    try {
+      var raw = localStorage.getItem(CRYSTAL_PRICES_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return Object.assign({}, DEFAULT_CRYSTAL_PRICES);
+  }
+
+  function saveCrystalPrices() {
+    try { localStorage.setItem(CRYSTAL_PRICES_STORAGE_KEY, JSON.stringify(crystalPrices)); } catch (e) {}
+  }
+
+  function loadCrystalVolumes() {
+    try {
+      var raw = localStorage.getItem(CRYSTAL_VOLUMES_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") return parsed;
+      }
+    } catch (e) {}
+    return Object.assign({}, DEFAULT_CRYSTAL_VOLUMES);
+  }
+
+  function saveCrystalVolumes() {
+    try { localStorage.setItem(CRYSTAL_VOLUMES_STORAGE_KEY, JSON.stringify(crystalVolumes)); } catch (e) {}
+  }
+
+  function loadAsOf() {
+    try {
+      var v = localStorage.getItem(ASOF_STORAGE_KEY);
+      if (v) return v;
+    } catch (e) {}
+    return DEFAULT_ASOF;
+  }
+
+  function loadTax() {
+    try {
+      var v = parseFloat(localStorage.getItem(TAX_STORAGE_KEY));
+      if (isFinite(v)) return v;
+    } catch (e) {}
+    return 2;
+  }
+
+  // Reconciles saved prices against the DEFAULT_PRICES baked into this
+  // publish. Without this, a scheduled hourly republish would update the
+  // embedded defaults but every returning visitor's localStorage would
+  // keep shadowing them forever -- the automation would run and do
+  // nothing anyone ever sees. So: for each item, if its market default
+  // actually moved since the last publish this browser saw AND the user
+  // never edited it away from that old default, pull the fresh number
+  // in. A price the user typed in themselves (differs from the old
+  // default) is left alone -- this never clobbers a manual edit.
+  function syncWithDefaults(current, defaults, snapshotKey, save) {
+    var lastSnapshot = null;
+    try {
+      var raw = localStorage.getItem(snapshotKey);
+      if (raw) lastSnapshot = JSON.parse(raw);
+    } catch (e) {}
+
+    if (!lastSnapshot) {
+      try { localStorage.setItem(snapshotKey, JSON.stringify(defaults)); } catch (e) {}
+      return false;
+    }
+
+    var changed = false;
+    Object.keys(defaults).forEach(function (item) {
+      var newDefault = defaults[item];
+      var oldDefault = lastSnapshot[item];
+      var curr = current[item];
+      if (oldDefault === undefined && curr === undefined) {
+        current[item] = newDefault;
+        changed = true;
+      } else if (oldDefault !== undefined && newDefault !== oldDefault) {
+        if (curr === undefined || curr === oldDefault) {
+          current[item] = newDefault;
+          changed = true;
+        }
+      }
+    });
+
+    if (changed) save();
+    try { localStorage.setItem(snapshotKey, JSON.stringify(defaults)); } catch (e) {}
+    return changed;
+  }
+
+  function syncPricesWithDefaults() {
+    var pricesChanged = syncWithDefaults(prices, DEFAULT_PRICES, SNAPSHOT_STORAGE_KEY, savePrices);
+    var volumesChanged = syncWithDefaults(volumes, DEFAULT_VOLUMES, VOL_SNAPSHOT_STORAGE_KEY, saveVolumes);
+    var crystalPricesChanged = syncWithDefaults(crystalPrices, DEFAULT_CRYSTAL_PRICES, CRYSTAL_SNAPSHOT_STORAGE_KEY, saveCrystalPrices);
+    var crystalVolumesChanged = syncWithDefaults(crystalVolumes, DEFAULT_CRYSTAL_VOLUMES, CRYSTAL_VOL_SNAPSHOT_STORAGE_KEY, saveCrystalVolumes);
+    if (pricesChanged || volumesChanged || crystalPricesChanged || crystalVolumesChanged) {
+      try { localStorage.setItem(ASOF_STORAGE_KEY, DEFAULT_ASOF); } catch (e) {}
+    }
+  }
+
+  function wsPerUnit(r) { return r.wsQty / r.itemQty; }
+  function unitsPerWs(r) { return r.itemQty / r.wsQty; }
+
+  function fmt(n) {
+    if (!isFinite(n)) return "—";
+    if (Math.abs(n - Math.round(n)) < 1e-6) return String(Math.round(n));
+    var rounded = Math.round(n * 1000) / 1000;
+    return String(rounded);
+  }
+
+  // Deterministic color per item name, tuned to sit legibly on both themes.
+  function colorFor(name) {
+    var h = 0;
+    for (var i = 0; i < name.length; i++) {
+      h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    }
+    var hue = h % 360;
+    return "hsl(" + hue + ", 52%, 46%)";
+  }
+
+  function allEntries() {
+    // WS itself, always first, as the implicit base unit.
+    return [{ item: WS, itemQty: 1, wsQty: 1, isBase: true }].concat(rates);
+  }
+
+  function render() {
+    renderSelect();
+    renderTable();
+    updateConverter();
+    renderPriceGrid();
+    renderArbitrage();
+    renderCrystalPriceGrid();
+    renderCrystalTable();
+  }
+
+  function renderSelect() {
+    var sel = document.getElementById("fromSelect");
+    var prev = sel.value;
+    sel.innerHTML = "";
+    allEntries().forEach(function (r) {
+      var opt = document.createElement("option");
+      opt.value = r.item;
+      opt.textContent = r.item;
+      sel.appendChild(opt);
+    });
+    if (prev && Array.from(sel.options).some(function (o) { return o.value === prev; })) {
+      sel.value = prev;
+    }
+  }
+
+  function renderTable() {
+    var body = document.getElementById("ratesBody");
+    body.innerHTML = "";
+    rates.forEach(function (r, idx) {
+      var tr = document.createElement("tr");
+
+      var itemTd = document.createElement("td");
+      var itemCell = document.createElement("div");
+      itemCell.className = "item-cell";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = colorFor(r.item);
+      itemCell.appendChild(dot);
+      var nameSpan = document.createElement("span");
+      nameSpan.textContent = r.item;
+      itemCell.appendChild(nameSpan);
+      itemTd.appendChild(itemCell);
+
+      var ratioTd = document.createElement("td");
+      ratioTd.className = "ratio-text";
+      ratioTd.textContent = r.itemQty + " " + r.item + " : " + r.wsQty + " WS";
+      if (r.note) {
+        var noteDiv = document.createElement("div");
+        noteDiv.className = "rate-note";
+        noteDiv.textContent = r.note;
+        ratioTd.appendChild(noteDiv);
+      }
+
+      var wsTd = document.createElement("td");
+      wsTd.className = "num-cell";
+      wsTd.textContent = fmt(wsPerUnit(r));
+
+      var unitsTd = document.createElement("td");
+      unitsTd.className = "num-cell";
+      unitsTd.textContent = fmt(unitsPerWs(r));
+
+      var actionsTd = document.createElement("td");
+      actionsTd.className = "row-actions";
+      var editBtn = document.createElement("button");
+      editBtn.className = "icon-btn";
+      editBtn.type = "button";
+      editBtn.textContent = "edit";
+      editBtn.addEventListener("click", function () { startEdit(idx); });
+      var delBtn = document.createElement("button");
+      delBtn.className = "icon-btn danger";
+      delBtn.type = "button";
+      delBtn.textContent = "delete";
+      delBtn.addEventListener("click", function () { deleteRate(idx); });
+      actionsTd.appendChild(editBtn);
+      actionsTd.appendChild(delBtn);
+
+      tr.appendChild(itemTd);
+      tr.appendChild(ratioTd);
+      tr.appendChild(wsTd);
+      tr.appendChild(unitsTd);
+      tr.appendChild(actionsTd);
+      body.appendChild(tr);
+    });
+    updateJsonView();
+  }
+
+  function updateJsonView() {
+    var pre = document.getElementById("jsonView");
+    pre.textContent = JSON.stringify(rates, null, 2);
+  }
+
+  function updateConverter() {
+    var amount = parseFloat(document.getElementById("amountInput").value);
+    if (!isFinite(amount)) amount = 0;
+    var fromName = document.getElementById("fromSelect").value;
+    var entries = allEntries();
+    var from = entries.filter(function (e) { return e.item === fromName; })[0];
+    if (!from) from = entries[0];
+
+    var wsValue = amount * wsPerUnit(from);
+    document.getElementById("wsResultValue").textContent = fmt(wsValue);
+
+    var grid = document.getElementById("alsoWorthGrid");
+    grid.innerHTML = "";
+    var others = entries.filter(function (e) { return e.item !== from.item; });
+
+    if (others.length === 0) {
+      var note = document.createElement("div");
+      note.className = "empty-note";
+      note.textContent = "Add another rate to compare against.";
+      grid.appendChild(note);
+      return;
+    }
+
+    others.forEach(function (r) {
+      var val = wsValue * unitsPerWs(r);
+      var chip = document.createElement("div");
+      chip.className = "chip";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = r.isBase ? "var(--accent)" : colorFor(r.item);
+      var valSpan = document.createElement("span");
+      valSpan.className = "val";
+      valSpan.textContent = fmt(val);
+      var nameSpan = document.createElement("span");
+      nameSpan.className = "name";
+      nameSpan.textContent = r.item;
+      chip.appendChild(dot);
+      chip.appendChild(valSpan);
+      chip.appendChild(nameSpan);
+      grid.appendChild(chip);
+    });
+  }
+
+  function renderPriceGrid() {
+    var grid = document.getElementById("priceGrid");
+    grid.innerHTML = "";
+    allEntries().forEach(function (r) {
+      var field = document.createElement("div");
+      field.className = "price-field";
+
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = r.isBase ? "var(--accent)" : colorFor(r.item);
+
+      var label = document.createElement("label");
+      var inputId = "price_" + r.item.replace(/[^a-z0-9]/gi, "_");
+      label.setAttribute("for", inputId);
+      label.textContent = r.item;
+      label.title = r.item;
+
+      var input = document.createElement("input");
+      input.type = "number";
+      input.id = inputId;
+      input.min = "0";
+      input.step = "any";
+      input.placeholder = "mesos";
+      input.title = "Price (mesos)";
+      input.value = prices[r.item] || "";
+      input.addEventListener("input", function () {
+        var v = parseFloat(input.value);
+        if (isFinite(v) && v >= 0) {
+          prices[r.item] = v;
+        } else {
+          delete prices[r.item];
+        }
+        savePrices();
+        renderArbitrage();
+      });
+
+      var volInput = document.createElement("input");
+      volInput.type = "number";
+      volInput.className = "vol-input";
+      volInput.min = "0";
+      volInput.step = "1";
+      volInput.placeholder = "vol";
+      volInput.title = "7-day sales volume";
+      volInput.value = volumes[r.item] || "";
+      volInput.addEventListener("input", function () {
+        var v = parseFloat(volInput.value);
+        if (isFinite(v) && v >= 0) {
+          volumes[r.item] = v;
+        } else {
+          delete volumes[r.item];
+        }
+        saveVolumes();
+        renderArbitrage();
+      });
+
+      field.appendChild(dot);
+      field.appendChild(label);
+      field.appendChild(input);
+      field.appendChild(volInput);
+      grid.appendChild(field);
+    });
+  }
+
+  function renderArbitrage() {
+    var body = document.getElementById("arbBody");
+    body.innerHTML = "";
+
+    var taxInput = document.getElementById("taxInput");
+    var tax = parseFloat(taxInput.value) / 100;
+    if (!isFinite(tax) || tax < 0) tax = 0;
+
+    var wsPrice = prices[WS];
+    if (!wsPrice) {
+      var tr0 = document.createElement("tr");
+      var td0 = document.createElement("td");
+      td0.colSpan = 7;
+      td0.className = "arb-empty";
+      td0.textContent = "Enter a White Scroll price above to see arbitrage results.";
+      tr0.appendChild(td0);
+      body.appendChild(tr0);
+      return;
+    }
+
+    var rows = [];
+    rates.forEach(function (r) {
+      var itemPrice = prices[r.item];
+      if (!itemPrice) return;
+
+      var costA = r.itemQty * itemPrice;
+      var revenueA = r.wsQty * wsPrice * (1 - tax);
+      var profitA = revenueA - costA;
+      var pctA = costA > 0 ? (profitA / costA) * 100 : -Infinity;
+
+      var costB = r.wsQty * wsPrice;
+      var revenueB = r.itemQty * itemPrice * (1 - tax);
+      var profitB = revenueB - costB;
+      var pctB = costB > 0 ? (profitB / costB) * 100 : -Infinity;
+
+      // Breakeven: the max price per unit of whatever you're buying that
+      // still nets zero profit -- i.e. your ceiling bid when shopping the
+      // market item-by-item, not just the aggregate lot cost.
+      var best = pctA >= pctB
+        ? { label: "Buy " + fmt(r.itemQty) + " " + r.item + " → sell " + fmt(r.wsQty) + " WS", buyLabel: fmt(r.itemQty) + " " + r.item, cost: costA, profit: profitA, pct: pctA, breakeven: revenueA / r.itemQty, breakevenUnit: r.item }
+        : { label: "Buy " + fmt(r.wsQty) + " WS → sell " + fmt(r.itemQty) + " " + r.item, buyLabel: fmt(r.wsQty) + " WS", cost: costB, profit: profitB, pct: pctB, breakeven: revenueB / r.wsQty, breakevenUnit: "WS" };
+
+      rows.push({ item: r.item, best: best, volume: volumes[r.item] });
+    });
+
+    if (rows.length === 0) {
+      var tr1 = document.createElement("tr");
+      var td1 = document.createElement("td");
+      td1.colSpan = 7;
+      td1.className = "arb-empty";
+      td1.textContent = "Enter market prices above for at least one item to see results.";
+      tr1.appendChild(td1);
+      body.appendChild(tr1);
+      return;
+    }
+
+    rows.sort(function (a, b) { return b.best.pct - a.best.pct; });
+
+    rows.forEach(function (row) {
+      var tr = document.createElement("tr");
+      var sign = row.best.pct >= 0 ? "pos" : "neg";
+
+      var itemTd = document.createElement("td");
+      var itemCell = document.createElement("div");
+      itemCell.className = "item-cell";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = colorFor(row.item);
+      itemCell.appendChild(dot);
+      var nameSpan = document.createElement("span");
+      nameSpan.textContent = row.item;
+      itemCell.appendChild(nameSpan);
+      itemTd.appendChild(itemCell);
+      if (row.best.pct >= OUTLIER_PCT) {
+        var flag = document.createElement("div");
+        flag.className = "outlier-flag";
+        flag.textContent = "⚠ unusually large — verify this rate is still honored";
+        itemTd.appendChild(flag);
+      }
+
+      var volTd = document.createElement("td");
+      volTd.className = "num-cell";
+      volTd.textContent = row.volume !== undefined ? fmt(row.volume) : "—";
+
+      var strategyTd = document.createElement("td");
+      strategyTd.className = "strategy-text";
+      strategyTd.textContent = row.best.label;
+
+      var buyForTd = document.createElement("td");
+      buyForTd.className = "num-cell";
+      buyForTd.textContent = fmt(Math.round(row.best.cost)) + " for " + row.best.buyLabel;
+
+      var breakevenTd = document.createElement("td");
+      breakevenTd.className = "num-cell";
+      breakevenTd.textContent = "≤ " + fmt(Math.round(row.best.breakeven)) + " / " + row.best.breakevenUnit;
+
+      var profitTd = document.createElement("td");
+      profitTd.className = "num-cell " + sign;
+      profitTd.textContent = (row.best.profit >= 0 ? "+" : "") + fmt(Math.round(row.best.profit));
+
+      var pctTd = document.createElement("td");
+      pctTd.className = "pct-cell " + sign;
+      pctTd.textContent = (row.best.pct >= 0 ? "+" : "") + fmt(Math.round(row.best.pct * 100) / 100) + "%";
+
+      tr.appendChild(itemTd);
+      tr.appendChild(volTd);
+      tr.appendChild(strategyTd);
+      tr.appendChild(buyForTd);
+      tr.appendChild(breakevenTd);
+      tr.appendChild(profitTd);
+      tr.appendChild(pctTd);
+      body.appendChild(tr);
+    });
+  }
+
+  function renderCrystalPriceGrid() {
+    var grid = document.getElementById("crystalPriceGrid");
+    grid.innerHTML = "";
+    var names = Object.keys(DEFAULT_CRYSTAL_PRICES);
+    names.forEach(function (name) {
+      var field = document.createElement("div");
+      field.className = "price-field";
+
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = colorFor(name);
+
+      var label = document.createElement("label");
+      var inputId = "cprice_" + name.replace(/[^a-z0-9]/gi, "_");
+      label.setAttribute("for", inputId);
+      label.textContent = name;
+      label.title = name;
+
+      var input = document.createElement("input");
+      input.type = "number";
+      input.id = inputId;
+      input.min = "0";
+      input.step = "any";
+      input.placeholder = "mesos";
+      input.title = "Price (mesos)";
+      input.value = crystalPrices[name] || "";
+      input.addEventListener("input", function () {
+        var v = parseFloat(input.value);
+        if (isFinite(v) && v >= 0) {
+          crystalPrices[name] = v;
+        } else {
+          delete crystalPrices[name];
+        }
+        saveCrystalPrices();
+        renderCrystalTable();
+      });
+
+      var volInput = document.createElement("input");
+      volInput.type = "number";
+      volInput.className = "vol-input";
+      volInput.min = "0";
+      volInput.step = "1";
+      volInput.placeholder = "vol";
+      volInput.title = "7-day sales volume";
+      volInput.value = crystalVolumes[name] || "";
+      volInput.addEventListener("input", function () {
+        var v = parseFloat(volInput.value);
+        if (isFinite(v) && v >= 0) {
+          crystalVolumes[name] = v;
+        } else {
+          delete crystalVolumes[name];
+        }
+        saveCrystalVolumes();
+        renderCrystalTable();
+      });
+
+      field.appendChild(dot);
+      field.appendChild(label);
+      field.appendChild(input);
+      field.appendChild(volInput);
+      grid.appendChild(field);
+    });
+  }
+
+  function renderCrystalTable() {
+    var body = document.getElementById("crystalBody");
+    var verdictGrid = document.getElementById("crystalVerdicts");
+    body.innerHTML = "";
+    verdictGrid.innerHTML = "";
+
+    // routeData[chainIndex][routeKey] = { cost, volume }
+    var routeData = CRYSTAL_CHAINS.map(function (chain) {
+      var data = {};
+      CRYSTAL_ROUTES.forEach(function (route) {
+        var itemName = chain[route.key];
+        var price = crystalPrices[itemName];
+        var vol = crystalVolumes[itemName];
+        data[route.key] = price ? { cost: route.qty * price, volume: vol } : null;
+      });
+      return data;
+    });
+
+    CRYSTAL_ROUTES.forEach(function (route) {
+      var tr = document.createElement("tr");
+      if (route.key === "advanced") tr.className = "buy-direct-row";
+
+      var routeTd = document.createElement("td");
+      var routeLabel = document.createElement("span");
+      routeLabel.className = "route-label" + (route.key === "advanced" ? " buy-direct" : "");
+      routeLabel.textContent = route.label;
+      routeTd.appendChild(routeLabel);
+      tr.appendChild(routeTd);
+
+      CRYSTAL_CHAINS.forEach(function (chain, i) {
+        var cell = document.createElement("td");
+        cell.className = "cost-cell";
+        var entry = routeData[i][route.key];
+        if (!entry) {
+          cell.textContent = "—";
+        } else {
+          cell.textContent = fmt(Math.round(entry.cost));
+
+          // Breakeven ceiling: the max price per unit of this tier that
+          // still ties buying Advanced directly -- your shopping ceiling
+          // when bidding on Ore/Basic/Intermediate one at a time.
+          if (route.key !== "advanced") {
+            var buyDirectEntry = routeData[i]["advanced"];
+            if (buyDirectEntry) {
+              var ceilingTag = document.createElement("span");
+              ceilingTag.className = "liquidity-tag";
+              ceilingTag.textContent = "≤ " + fmt(Math.round(buyDirectEntry.cost / route.qty)) + "/unit";
+              cell.appendChild(ceilingTag);
+            }
+          }
+
+          if (entry.volume !== undefined && entry.volume < THIN_VOLUME) {
+            var tag = document.createElement("span");
+            tag.className = "liquidity-tag thin";
+            tag.textContent = "⚠ n=" + entry.volume;
+            cell.appendChild(tag);
+          } else if (entry.volume !== undefined) {
+            var tag2 = document.createElement("span");
+            tag2.className = "liquidity-tag";
+            tag2.textContent = "n=" + entry.volume;
+            cell.appendChild(tag2);
+          }
+        }
+        tr.appendChild(cell);
+      });
+
+      body.appendChild(tr);
+    });
+
+    CRYSTAL_CHAINS.forEach(function (chain, i) {
+      var buyDirect = routeData[i]["advanced"];
+      if (!buyDirect) return;
+
+      var craftRoutes = ["ore", "basic", "intermediate"]
+        .map(function (key) { return routeData[i][key]; })
+        .filter(function (e) { return e !== null; });
+
+      var verdict = document.createElement("div");
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = colorFor(chain.name);
+      var chainLabel = document.createElement("span");
+      chainLabel.className = "verdict-chain";
+      chainLabel.textContent = chain.name;
+      var text = document.createElement("span");
+      text.className = "verdict-text";
+
+      if (craftRoutes.length === 0) {
+        verdict.className = "verdict";
+        text.textContent = "Not enough price data to compare crafting routes.";
+      } else {
+        var cheapest = craftRoutes.reduce(function (a, b) { return b.cost < a.cost ? b : a; });
+        var savings = buyDirect.cost - cheapest.cost;
+        var pct = (savings / buyDirect.cost) * 100;
+        var thinNote = cheapest.volume !== undefined && cheapest.volume < THIN_VOLUME
+          ? " (thin data, n=" + cheapest.volume + " — verify before relying on this)"
+          : "";
+        if (savings > 0) {
+          verdict.className = "verdict craft-wins";
+          text.textContent = "Crafting beats buying by " + fmt(Math.round(savings)) + " mesos (" + fmt(Math.round(pct * 10) / 10) + "% cheaper)" + thinNote + ".";
+        } else {
+          verdict.className = "verdict buy-wins";
+          text.textContent = "Buying Advanced directly beats crafting — cheapest craft route costs " + fmt(Math.round(-savings)) + " more" + thinNote + ".";
+        }
+      }
+
+      verdict.appendChild(dot);
+      verdict.appendChild(chainLabel);
+      verdict.appendChild(text);
+      verdictGrid.appendChild(verdict);
+    });
+  }
+
+  function startEdit(idx) {
+    var r = rates[idx];
+    editingIndex = idx;
+    document.getElementById("newItemName").value = r.item;
+    document.getElementById("newItemQty").value = r.itemQty;
+    document.getElementById("newWsQty").value = r.wsQty;
+    document.getElementById("newNote").value = r.note || "";
+    document.getElementById("addBtn").textContent = "Save edit";
+    document.getElementById("cancelEdit").hidden = false;
+    document.getElementById("newItemName").focus();
+  }
+
+  function stopEdit() {
+    editingIndex = null;
+    document.getElementById("addForm").reset();
+    document.getElementById("addBtn").textContent = "Add rate";
+    document.getElementById("cancelEdit").hidden = true;
+  }
+
+  function deleteRate(idx) {
+    rates.splice(idx, 1);
+    saveRates();
+    render();
+  }
+
+  function flashRow(itemName) {
+    requestAnimationFrame(function () {
+      var body = document.getElementById("ratesBody");
+      Array.from(body.querySelectorAll("tr")).forEach(function (tr) {
+        if (tr.textContent.indexOf(itemName) === 0 || tr.querySelector(".item-cell span:last-child").textContent === itemName) {
+          tr.classList.add("flash");
+        }
+      });
+    });
+  }
+
+  document.getElementById("addForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = document.getElementById("newItemName").value.trim();
+    var itemQty = parseFloat(document.getElementById("newItemQty").value);
+    var wsQty = parseFloat(document.getElementById("newWsQty").value);
+    var note = document.getElementById("newNote").value.trim();
+    if (!name || !isFinite(itemQty) || !isFinite(wsQty) || itemQty <= 0 || wsQty <= 0) return;
+    if (name.toLowerCase() === WS.toLowerCase()) return;
+
+    var entry = { item: name, itemQty: itemQty, wsQty: wsQty };
+    if (note) entry.note = note;
+
+    if (editingIndex !== null) {
+      rates[editingIndex] = entry;
+    } else {
+      var existing = rates.filter(function (r) { return r.item.toLowerCase() === name.toLowerCase(); })[0];
+      if (existing) {
+        existing.itemQty = itemQty;
+        existing.wsQty = wsQty;
+        if (note) existing.note = note; else delete existing.note;
+      } else {
+        rates.push(entry);
+      }
+    }
+    saveRates();
+    stopEdit();
+    render();
+    flashRow(name);
+  });
+
+  document.getElementById("cancelEdit").addEventListener("click", stopEdit);
+
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    if (!confirm("Reset the rate board to the original 8 defaults? This clears anything you've added or edited.")) return;
+    rates = DEFAULT_RATES.slice();
+    saveRates();
+    stopEdit();
+    render();
+  });
+
+  document.getElementById("jsonToggle").addEventListener("click", function () {
+    var pre = document.getElementById("jsonView");
+    pre.hidden = !pre.hidden;
+    document.getElementById("jsonToggle").textContent = pre.hidden ? "View data" : "Hide data";
+  });
+
+  document.getElementById("amountInput").addEventListener("input", updateConverter);
+  document.getElementById("fromSelect").addEventListener("change", updateConverter);
+
+  document.getElementById("taxInput").addEventListener("input", function () {
+    try { localStorage.setItem(TAX_STORAGE_KEY, document.getElementById("taxInput").value); } catch (e) {}
+    renderArbitrage();
+  });
+
+  document.getElementById("pricesAsOf").addEventListener("input", function () {
+    try { localStorage.setItem(ASOF_STORAGE_KEY, document.getElementById("pricesAsOf").value); } catch (e) {}
+  });
+
+  rates = loadRates();
+  migrateCleanSlateScroll();
+  saveRates();
+  prices = loadPrices();
+  volumes = loadVolumes();
+  crystalPrices = loadCrystalPrices();
+  crystalVolumes = loadCrystalVolumes();
+  syncPricesWithDefaults();
+  savePrices();
+  saveVolumes();
+  saveCrystalPrices();
+  saveCrystalVolumes();
+  document.getElementById("pricesAsOf").value = loadAsOf();
+  document.getElementById("taxInput").value = loadTax();
+  render();
+})();
+</script>
+
+</body>
+</html>
