@@ -755,7 +755,7 @@
 
   <section class="crystal card">
     <h2>Crystal Crafting</h2>
-    <p class="sub" style="margin-bottom: 4px;">Three refining chains. Each tier is a probabilistic craft, not a fixed exchange &mdash; refining Raw Ore can land on Basic, Intermediate, or (rarely) Advanced directly; combining 10 of a tier can partially fail (9 back) or jackpot straight to Advanced. Quantities below are expected values over those odds, not guarantees &mdash; actual luck on any one attempt run can differ a lot.</p>
+    <p class="sub" style="margin-bottom: 4px;">Seven refining chains. Each tier is a probabilistic craft, not a fixed exchange &mdash; refining Raw Ore can land on Basic, Intermediate, or (rarely) Advanced directly; combining 10 of a tier can partially fail (9 back) or jackpot straight to Advanced. Every attempt also costs a flat mesos fee whether it succeeds or fails, included below. Quantities and costs are expected values over those odds, not guarantees &mdash; actual luck on any one attempt run can differ a lot.</p>
 
     <div class="subsection">
       <div class="subsection-head">
@@ -948,9 +948,36 @@
     };
   }
 
+  // Each crafting attempt costs mesos on top of materials -- charged
+  // whether it succeeds or fails. Named by the tier the action targets:
+  // "basic" = refining 1 Raw Ore (produces Basic most often), "intermediate"
+  // = a 10-Basic combine attempt, "advanced" = a 10-Intermediate combine
+  // attempt. Same fees for both odds tables (not stated otherwise).
+  var CRYSTAL_FEES = { raw: 110000, basic: 330000, intermediate: 550000 };
+
+  // Fee cost amortized per unit of material consumed, cascading downward
+  // (a unit that jackpots or fails still needs its downstream fees paid
+  // eventually) -- same recursive shape as computeExpectedQuantities.
+  function computeAmortizedFees(odds) {
+    var e = odds.intermediate.fail;
+    var perIntermediateUnit = CRYSTAL_FEES.intermediate / (10 - 9 * e);
+
+    var a = odds.basic.toIntermediate, c = odds.basic.fail;
+    var perBasicUnit = (CRYSTAL_FEES.basic + a * perIntermediateUnit) / (10 - 9 * c);
+
+    var pB = odds.raw.toBasic, pI = odds.raw.toIntermediate;
+    var perOreUnit = CRYSTAL_FEES.raw + pB * perBasicUnit + pI * perIntermediateUnit;
+
+    return { ore: perOreUnit, basic: perBasicUnit, intermediate: perIntermediateUnit, advanced: 0 };
+  }
+
   var CRYSTAL_EXPECTED_QTY = {
     crystal: computeExpectedQuantities(CRYSTAL_ODDS.crystal),
     gem: computeExpectedQuantities(CRYSTAL_ODDS.gem)
+  };
+  var CRYSTAL_AMORTIZED_FEES = {
+    crystal: computeAmortizedFees(CRYSTAL_ODDS.crystal),
+    gem: computeAmortizedFees(CRYSTAL_ODDS.gem)
   };
 
   var CRYSTAL_ROUTE_KEYS = ["ore", "basic", "intermediate", "advanced"];
@@ -1614,14 +1641,18 @@
     var rows = [];
     CRYSTAL_CHAINS.forEach(function (chain) {
       var routes = routesForChain(chain);
+      var fees = CRYSTAL_AMORTIZED_FEES[chain.odds];
 
       // { cost, volume } per route, or null if that tier has no price yet.
+      // cost = qty needed x (market price + amortized crafting-attempt fee
+      // for that tier, cascaded downward -- 0 for "advanced", it's a
+      // straight market buy with no attempt involved).
       var routeData = {};
       routes.forEach(function (route) {
         var itemName = chain[route.key];
         var price = crystalPrices[itemName];
         var vol = crystalVolumes[itemName];
-        routeData[route.key] = price ? { cost: route.qty * price, volume: vol } : null;
+        routeData[route.key] = price ? { cost: route.qty * (price + fees[route.key]), volume: vol } : null;
       });
 
       var buyDirect = routeData["advanced"];
@@ -1644,7 +1675,9 @@
       var revenue = buyDirect.cost * (1 - tax);
       var profit = revenue - best.entry.cost;
       var pct = (profit / best.entry.cost) * 100;
-      var ceiling = buyDirect.cost / route.qty;
+      // Max MARKET price per unit (fee is fixed, not something you bid on --
+      // back it out so the ceiling reflects only what you're actually shopping for).
+      var ceiling = buyDirect.cost / route.qty - fees[best.key];
 
       rows.push({
         chain: chain,
