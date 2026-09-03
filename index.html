@@ -685,7 +685,6 @@
 </head>
 <body>
 
-
 <div class="page">
   <header class="masthead">
     <div class="eyebrow">DreamMS &middot; Barter Economy</div>
@@ -755,7 +754,7 @@
 
   <section class="crystal card">
     <h2>Crystal Crafting</h2>
-    <p class="sub" style="margin-bottom: 4px;">Seven refining chains. Each tier is a probabilistic craft, not a fixed exchange &mdash; refining Raw Ore can land on Basic, Intermediate, or (rarely) Advanced directly; combining 10 of a tier can partially fail (9 back) or jackpot straight to Advanced. Every attempt also costs a flat mesos fee whether it succeeds or fails, included below. Quantities and costs are expected values over those odds, not guarantees &mdash; actual luck on any one attempt run can differ a lot.</p>
+    <p class="sub" style="margin-bottom: 4px;">Seven refining chains. Ore is a flat, guaranteed craft &mdash; 10 Ore plus a fixed mesos fee makes 1 Raw (not separately traded, so its cost is always derived from Ore). From Raw onward every tier is a probabilistic craft, not a fixed exchange &mdash; refining Raw can land on Basic, Intermediate, or (rarely) Advanced directly; combining 10 of a tier can partially fail (9 back) or jackpot straight to Advanced. Every craft attempt also costs a flat mesos fee whether it succeeds or fails, included below. Quantities and costs are expected values over those odds, not guarantees &mdash; actual luck on any one attempt run can differ a lot.</p>
 
     <div class="subsection">
       <div class="subsection-head">
@@ -900,14 +899,18 @@
   var CRYSTAL_SNAPSHOT_STORAGE_KEY = "wsExchangeCrystalPricesSnapshot_v1";
   var CRYSTAL_VOL_SNAPSHOT_STORAGE_KEY = "wsExchangeCrystalVolumesSnapshot_v1";
 
+  // oreFee: flat mesos cost to craft 1 Raw unit from 10 Ore (deterministic,
+  // not probabilistic -- this happens *before* the Raw item ever enters the
+  // odds table below). The Raw item itself isn't market-traded, so its cost
+  // is always derived as 10x Ore price + this fee, never looked up directly.
   var CRYSTAL_CHAINS = [
-    { name: "Power Crystal", odds: "crystal", ore: "Power Crystal Ore", basic: "Basic Power Crystal", intermediate: "Intermediate Power Crystal", advanced: "Advanced Power Crystal" },
-    { name: "Diamond", odds: "gem", ore: "Diamond Ore", basic: "Basic Diamond", intermediate: "Intermediate Diamond", advanced: "Advanced Diamond" },
-    { name: "Black Crystal", odds: "crystal", ore: "Black Crystal Ore", basic: "Basic Black Crystal", intermediate: "Intermediate Black Crystal", advanced: "Advanced Black Crystal" },
-    { name: "DEX Crystal", odds: "crystal", ore: "DEX Crystal Ore", basic: "Basic DEX Crystal", intermediate: "Intermediate DEX Crystal", advanced: "Advanced DEX Crystal" },
-    { name: "LUK Crystal", odds: "crystal", ore: "LUK Crystal Ore", basic: "Basic LUK Crystal", intermediate: "Intermediate LUK Crystal", advanced: "Advanced LUK Crystal" },
-    { name: "Wisdom Crystal", odds: "crystal", ore: "Wisdom Crystal Ore", basic: "Basic Wisdom Crystal", intermediate: "Intermediate Wisdom Crystal", advanced: "Advanced Wisdom Crystal" },
-    { name: "Sapphire", odds: "gem", ore: "Sapphire Ore", basic: "Basic Sapphire", intermediate: "Intermediate Sapphire", advanced: "Advanced Sapphire" }
+    { name: "Power Crystal", odds: "crystal", ore: "Power Crystal Ore", oreFee: 5000, basic: "Basic Power Crystal", intermediate: "Intermediate Power Crystal", advanced: "Advanced Power Crystal" },
+    { name: "Diamond", odds: "gem", ore: "Diamond Ore", oreFee: 1000, basic: "Basic Diamond", intermediate: "Intermediate Diamond", advanced: "Advanced Diamond" },
+    { name: "Black Crystal", odds: "crystal", ore: "Black Crystal Ore", oreFee: 3000, basic: "Basic Black Crystal", intermediate: "Intermediate Black Crystal", advanced: "Advanced Black Crystal" },
+    { name: "DEX Crystal", odds: "crystal", ore: "DEX Crystal Ore", oreFee: 5000, basic: "Basic DEX Crystal", intermediate: "Intermediate DEX Crystal", advanced: "Advanced DEX Crystal" },
+    { name: "LUK Crystal", odds: "crystal", ore: "LUK Crystal Ore", oreFee: 5000, basic: "Basic LUK Crystal", intermediate: "Intermediate LUK Crystal", advanced: "Advanced LUK Crystal" },
+    { name: "Wisdom Crystal", odds: "crystal", ore: "Wisdom Crystal Ore", oreFee: 5000, basic: "Basic Wisdom Crystal", intermediate: "Intermediate Wisdom Crystal", advanced: "Advanced Wisdom Crystal" },
+    { name: "Sapphire", odds: "gem", ore: "Sapphire Ore", oreFee: 500, basic: "Basic Sapphire", intermediate: "Intermediate Sapphire", advanced: "Advanced Sapphire" }
   ];
 
   // "Crystal" column odds (same table applied to all three chains).
@@ -984,11 +987,15 @@
 
   function routesForChain(chain) {
     var qty = CRYSTAL_EXPECTED_QTY[chain.odds];
+    // qty.ore is expected *Raw* units needed (matches the odds table's
+    // "raw" tier) -- 10 Ore buys 1 Raw, so the Ore route's price multiplier
+    // is 10 and it carries chain.oreFee on top (see computeAmortizedFees
+    // for the separate, already-included, probabilistic attempt fee).
     return [
-      { key: "ore", qty: qty.ore, label: fmt(qty.ore) + "× Ore (expected)" },
-      { key: "basic", qty: qty.basic, label: fmt(qty.basic) + "× Basic (expected)" },
-      { key: "intermediate", qty: qty.intermediate, label: fmt(qty.intermediate) + "× Intermediate (expected)" },
-      { key: "advanced", qty: 1, label: "Buy Advanced directly" }
+      { key: "ore", qty: qty.ore, label: fmt(qty.ore * 10) + "× Ore (expected)", priceMultiplier: 10, flatFee: chain.oreFee },
+      { key: "basic", qty: qty.basic, label: fmt(qty.basic) + "× Basic (expected)", priceMultiplier: 1, flatFee: 0 },
+      { key: "intermediate", qty: qty.intermediate, label: fmt(qty.intermediate) + "× Intermediate (expected)", priceMultiplier: 1, flatFee: 0 },
+      { key: "advanced", qty: 1, label: "Buy Advanced directly", priceMultiplier: 1, flatFee: 0 }
     ];
   }
 
@@ -1644,15 +1651,18 @@
       var fees = CRYSTAL_AMORTIZED_FEES[chain.odds];
 
       // { cost, volume } per route, or null if that tier has no price yet.
-      // cost = qty needed x (market price + amortized crafting-attempt fee
-      // for that tier, cascaded downward -- 0 for "advanced", it's a
-      // straight market buy with no attempt involved).
+      // cost = qty needed x (market price x priceMultiplier + flatFee +
+      // amortized crafting-attempt fee for that tier, cascaded downward --
+      // 0 for "advanced", it's a straight market buy with no attempt
+      // involved). priceMultiplier/flatFee are both 1x/0 except the Ore
+      // route, which buys 10 Ore + pays chain.oreFee per Raw unit needed.
       var routeData = {};
       routes.forEach(function (route) {
         var itemName = chain[route.key];
         var price = crystalPrices[itemName];
         var vol = crystalVolumes[itemName];
-        routeData[route.key] = price ? { cost: route.qty * (price + fees[route.key]), volume: vol } : null;
+        var unitCost = route.priceMultiplier * price + route.flatFee + fees[route.key];
+        routeData[route.key] = price ? { cost: route.qty * unitCost, volume: vol } : null;
       });
 
       var buyDirect = routeData["advanced"];
@@ -1675,9 +1685,10 @@
       var revenue = buyDirect.cost * (1 - tax);
       var profit = revenue - best.entry.cost;
       var pct = (profit / best.entry.cost) * 100;
-      // Max MARKET price per unit (fee is fixed, not something you bid on --
-      // back it out so the ceiling reflects only what you're actually shopping for).
-      var ceiling = buyDirect.cost / route.qty - fees[best.key];
+      // Max MARKET price per unit (fees/multiplier are fixed, not something
+      // you bid on -- back them out so the ceiling reflects only what
+      // you're actually shopping for, e.g. Ore price per Ore, not per Raw).
+      var ceiling = (buyDirect.cost / route.qty - route.flatFee - fees[best.key]) / route.priceMultiplier;
 
       rows.push({
         chain: chain,
