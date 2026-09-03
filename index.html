@@ -767,21 +767,27 @@
     <div class="subsection">
       <div class="subsection-head">
         <span class="subsection-label">Results</span>
+        <span class="tax-field">
+          sell-leg tax
+          <input type="number" id="crystalTaxInput" value="2" min="0" max="100" step="any">
+          %
+        </span>
       </div>
       <div class="table-scroll">
         <table id="crystalTable">
           <thead>
             <tr>
-              <th>Route</th>
-              <th>Power Crystal</th>
-              <th>Diamond</th>
-              <th>Black Crystal</th>
+              <th>Chain</th>
+              <th>Cheapest craft route</th>
+              <th>Craft cost</th>
+              <th>Buy Advanced direct</th>
+              <th>Profit if crafted &amp; sold</th>
+              <th>Return</th>
             </tr>
           </thead>
           <tbody id="crystalBody"></tbody>
         </table>
       </div>
-      <div id="crystalVerdicts" class="verdict-grid"></div>
     </div>
   </section>
 
@@ -846,6 +852,7 @@
   var VOLUMES_STORAGE_KEY = "wsExchangeVolumes_v1";
   var ASOF_STORAGE_KEY = "wsExchangePricesAsOf_v1";
   var TAX_STORAGE_KEY = "wsExchangeTax_v1";
+  var CRYSTAL_TAX_STORAGE_KEY = "wsExchangeCrystalTax_v1";
   var SNAPSHOT_STORAGE_KEY = "wsExchangePricesSnapshot_v1";
   var VOL_SNAPSHOT_STORAGE_KEY = "wsExchangeVolumesSnapshot_v1";
 
@@ -894,29 +901,43 @@
   var CRYSTAL_VOL_SNAPSHOT_STORAGE_KEY = "wsExchangeCrystalVolumesSnapshot_v1";
 
   var CRYSTAL_CHAINS = [
-    { name: "Power Crystal", ore: "Power Crystal Ore", basic: "Basic Power Crystal", intermediate: "Intermediate Power Crystal", advanced: "Advanced Power Crystal" },
-    { name: "Diamond", ore: "Diamond Ore", basic: "Basic Diamond", intermediate: "Intermediate Diamond", advanced: "Advanced Diamond" },
-    { name: "Black Crystal", ore: "Black Crystal Ore", basic: "Basic Black Crystal", intermediate: "Intermediate Black Crystal", advanced: "Advanced Black Crystal" }
+    { name: "Power Crystal", odds: "crystal", ore: "Power Crystal Ore", basic: "Basic Power Crystal", intermediate: "Intermediate Power Crystal", advanced: "Advanced Power Crystal" },
+    { name: "Diamond", odds: "gem", ore: "Diamond Ore", basic: "Basic Diamond", intermediate: "Intermediate Diamond", advanced: "Advanced Diamond" },
+    { name: "Black Crystal", odds: "crystal", ore: "Black Crystal Ore", basic: "Basic Black Crystal", intermediate: "Intermediate Black Crystal", advanced: "Advanced Black Crystal" },
+    { name: "DEX Crystal", odds: "crystal", ore: "DEX Crystal Ore", basic: "Basic DEX Crystal", intermediate: "Intermediate DEX Crystal", advanced: "Advanced DEX Crystal" },
+    { name: "LUK Crystal", odds: "crystal", ore: "LUK Crystal Ore", basic: "Basic LUK Crystal", intermediate: "Intermediate LUK Crystal", advanced: "Advanced LUK Crystal" },
+    { name: "Wisdom Crystal", odds: "crystal", ore: "Wisdom Crystal Ore", basic: "Basic Wisdom Crystal", intermediate: "Intermediate Wisdom Crystal", advanced: "Advanced Wisdom Crystal" },
+    { name: "Sapphire", odds: "gem", ore: "Sapphire Ore", basic: "Basic Sapphire", intermediate: "Intermediate Sapphire", advanced: "Advanced Sapphire" }
   ];
 
   // "Crystal" column odds (same table applied to all three chains).
   // Each group sums to 1 -- mutually exclusive outcomes per attempt.
+  // Two different odds tables -- Diamond and Sapphire use "Gem" odds,
+  // everything else uses "Crystal" odds. Each chain below is tagged with
+  // which one applies.
   var CRYSTAL_ODDS = {
-    raw: { toBasic: 0.89, toIntermediate: 0.09, toAdvanced: 0.02 },
-    basic: { fail: 0.10, toIntermediate: 0.88, toAdvanced: 0.02 },        // 10 consumed/attempt; fail returns 9
-    intermediate: { fail: 0.65, toAdvanced: 0.35 }                         // 10 consumed/attempt; fail returns 9
+    crystal: {
+      raw: { toBasic: 0.89, toIntermediate: 0.09, toAdvanced: 0.02 },
+      basic: { fail: 0.10, toIntermediate: 0.88, toAdvanced: 0.02 },       // 10 consumed/attempt; fail returns 9
+      intermediate: { fail: 0.65, toAdvanced: 0.35 }                        // 10 consumed/attempt; fail returns 9
+    },
+    gem: {
+      raw: { toBasic: 0.85, toIntermediate: 0.10, toAdvanced: 0.05 },
+      basic: { fail: 0.10, toIntermediate: 0.85, toAdvanced: 0.05 },
+      intermediate: { fail: 0.10, toAdvanced: 0.90 }
+    }
   };
 
   // Expected-value chain, computed bottom-up so a jackpot at any tier
   // (e.g. Raw landing on Advanced directly) reduces the tiers above it.
-  function computeExpectedQuantities() {
-    var d = CRYSTAL_ODDS.intermediate.toAdvanced, e = CRYSTAL_ODDS.intermediate.fail;
+  function computeExpectedQuantities(odds) {
+    var d = odds.intermediate.toAdvanced, e = odds.intermediate.fail;
     var advPerIntermediate = d / (10 - 9 * e);
 
-    var a = CRYSTAL_ODDS.basic.toIntermediate, b = CRYSTAL_ODDS.basic.toAdvanced, c = CRYSTAL_ODDS.basic.fail;
+    var a = odds.basic.toIntermediate, b = odds.basic.toAdvanced, c = odds.basic.fail;
     var advPerBasic = (b + a * advPerIntermediate) / (10 - 9 * c);
 
-    var pB = CRYSTAL_ODDS.raw.toBasic, pI = CRYSTAL_ODDS.raw.toIntermediate, pA = CRYSTAL_ODDS.raw.toAdvanced;
+    var pB = odds.raw.toBasic, pI = odds.raw.toIntermediate, pA = odds.raw.toAdvanced;
     var advPerOre = pA + pI * advPerIntermediate + pB * advPerBasic;
 
     return {
@@ -927,13 +948,23 @@
     };
   }
 
-  var CRYSTAL_EXPECTED_QTY = computeExpectedQuantities();
-  var CRYSTAL_ROUTES = [
-    { key: "ore", qty: CRYSTAL_EXPECTED_QTY.ore, label: fmt(CRYSTAL_EXPECTED_QTY.ore) + "× Ore (expected)" },
-    { key: "basic", qty: CRYSTAL_EXPECTED_QTY.basic, label: fmt(CRYSTAL_EXPECTED_QTY.basic) + "× Basic (expected)" },
-    { key: "intermediate", qty: CRYSTAL_EXPECTED_QTY.intermediate, label: fmt(CRYSTAL_EXPECTED_QTY.intermediate) + "× Intermediate (expected)" },
-    { key: "advanced", qty: 1, label: "Buy Advanced directly" }
-  ];
+  var CRYSTAL_EXPECTED_QTY = {
+    crystal: computeExpectedQuantities(CRYSTAL_ODDS.crystal),
+    gem: computeExpectedQuantities(CRYSTAL_ODDS.gem)
+  };
+
+  var CRYSTAL_ROUTE_KEYS = ["ore", "basic", "intermediate", "advanced"];
+
+  function routesForChain(chain) {
+    var qty = CRYSTAL_EXPECTED_QTY[chain.odds];
+    return [
+      { key: "ore", qty: qty.ore, label: fmt(qty.ore) + "× Ore (expected)" },
+      { key: "basic", qty: qty.basic, label: fmt(qty.basic) + "× Basic (expected)" },
+      { key: "intermediate", qty: qty.intermediate, label: fmt(qty.intermediate) + "× Intermediate (expected)" },
+      { key: "advanced", qty: 1, label: "Buy Advanced directly" }
+    ];
+  }
+
   var THIN_VOLUME = 5; // routes priced on fewer than this many 7d sales get flagged
 
   var DEFAULT_CRYSTAL_PRICES = {
@@ -948,7 +979,22 @@
     "Black Crystal Ore": 48987,
     "Basic Black Crystal": 98000,
     "Intermediate Black Crystal": 4900000,
-    "Advanced Black Crystal": 26472001
+    "Advanced Black Crystal": 26472001,
+    "DEX Crystal Ore": 34163,
+    "Basic DEX Crystal": 98000,
+    "Intermediate DEX Crystal": 1470000,
+    "Advanced DEX Crystal": 24610131,
+    "LUK Crystal Ore": 144304,
+    "Basic LUK Crystal": 293999,
+    "Intermediate LUK Crystal": 4410000,
+    "Advanced LUK Crystal": 64165503,
+    "Wisdom Crystal Ore": 137296,
+    "Basic Wisdom Crystal": 98000,
+    "Intermediate Wisdom Crystal": 5559272,
+    "Advanced Wisdom Crystal": 57806851,
+    "Sapphire Ore": 19599,
+    "Basic Sapphire": 147000,
+    "Advanced Sapphire": 14840000
   };
   var DEFAULT_CRYSTAL_VOLUMES = {
     "Power Crystal Ore": 28,
@@ -962,7 +1008,22 @@
     "Black Crystal Ore": 14,
     "Basic Black Crystal": 1,
     "Intermediate Black Crystal": 1,
-    "Advanced Black Crystal": 198
+    "Advanced Black Crystal": 198,
+    "DEX Crystal Ore": 37,
+    "Basic DEX Crystal": 1,
+    "Intermediate DEX Crystal": 4,
+    "Advanced DEX Crystal": 133,
+    "LUK Crystal Ore": 20,
+    "Basic LUK Crystal": 1,
+    "Intermediate LUK Crystal": 3,
+    "Advanced LUK Crystal": 110,
+    "Wisdom Crystal Ore": 15,
+    "Basic Wisdom Crystal": 1,
+    "Intermediate Wisdom Crystal": 2,
+    "Advanced Wisdom Crystal": 91,
+    "Sapphire Ore": 1,
+    "Basic Sapphire": 2,
+    "Advanced Sapphire": 5
   };
 
   var rates = [];
@@ -1076,6 +1137,14 @@
   function loadTax() {
     try {
       var v = parseFloat(localStorage.getItem(TAX_STORAGE_KEY));
+      if (isFinite(v)) return v;
+    } catch (e) {}
+    return 2;
+  }
+
+  function loadCrystalTax() {
+    try {
+      var v = parseFloat(localStorage.getItem(CRYSTAL_TAX_STORAGE_KEY));
       if (isFinite(v)) return v;
     } catch (e) {}
     return 2;
@@ -1536,114 +1605,144 @@
 
   function renderCrystalTable() {
     var body = document.getElementById("crystalBody");
-    var verdictGrid = document.getElementById("crystalVerdicts");
     body.innerHTML = "";
-    verdictGrid.innerHTML = "";
 
-    // routeData[chainIndex][routeKey] = { cost, volume }
-    var routeData = CRYSTAL_CHAINS.map(function (chain) {
-      var data = {};
-      CRYSTAL_ROUTES.forEach(function (route) {
+    var taxInput = document.getElementById("crystalTaxInput");
+    var tax = parseFloat(taxInput.value) / 100;
+    if (!isFinite(tax) || tax < 0) tax = 0;
+
+    var rows = [];
+    CRYSTAL_CHAINS.forEach(function (chain) {
+      var routes = routesForChain(chain);
+
+      // { cost, volume } per route, or null if that tier has no price yet.
+      var routeData = {};
+      routes.forEach(function (route) {
         var itemName = chain[route.key];
         var price = crystalPrices[itemName];
         var vol = crystalVolumes[itemName];
-        data[route.key] = price ? { cost: route.qty * price, volume: vol } : null;
-      });
-      return data;
-    });
-
-    CRYSTAL_ROUTES.forEach(function (route) {
-      var tr = document.createElement("tr");
-      if (route.key === "advanced") tr.className = "buy-direct-row";
-
-      var routeTd = document.createElement("td");
-      var routeLabel = document.createElement("span");
-      routeLabel.className = "route-label" + (route.key === "advanced" ? " buy-direct" : "");
-      routeLabel.textContent = route.label;
-      routeTd.appendChild(routeLabel);
-      tr.appendChild(routeTd);
-
-      CRYSTAL_CHAINS.forEach(function (chain, i) {
-        var cell = document.createElement("td");
-        cell.className = "cost-cell";
-        var entry = routeData[i][route.key];
-        if (!entry) {
-          cell.textContent = "—";
-        } else {
-          cell.textContent = fmt(Math.round(entry.cost));
-
-          // Breakeven ceiling: the max price per unit of this tier that
-          // still ties buying Advanced directly -- your shopping ceiling
-          // when bidding on Ore/Basic/Intermediate one at a time.
-          if (route.key !== "advanced") {
-            var buyDirectEntry = routeData[i]["advanced"];
-            if (buyDirectEntry) {
-              var ceilingTag = document.createElement("span");
-              ceilingTag.className = "liquidity-tag";
-              ceilingTag.textContent = "≤ " + fmt(Math.round(buyDirectEntry.cost / route.qty)) + "/unit";
-              cell.appendChild(ceilingTag);
-            }
-          }
-
-          if (entry.volume !== undefined && entry.volume < THIN_VOLUME) {
-            var tag = document.createElement("span");
-            tag.className = "liquidity-tag thin";
-            tag.textContent = "⚠ n=" + entry.volume;
-            cell.appendChild(tag);
-          } else if (entry.volume !== undefined) {
-            var tag2 = document.createElement("span");
-            tag2.className = "liquidity-tag";
-            tag2.textContent = "n=" + entry.volume;
-            cell.appendChild(tag2);
-          }
-        }
-        tr.appendChild(cell);
+        routeData[route.key] = price ? { cost: route.qty * price, volume: vol } : null;
       });
 
-      body.appendChild(tr);
-    });
-
-    CRYSTAL_CHAINS.forEach(function (chain, i) {
-      var buyDirect = routeData[i]["advanced"];
-      if (!buyDirect) return;
-
-      var craftRoutes = ["ore", "basic", "intermediate"]
-        .map(function (key) { return routeData[i][key]; })
-        .filter(function (e) { return e !== null; });
-
-      var verdict = document.createElement("div");
-      var dot = document.createElement("span");
-      dot.className = "dot";
-      dot.style.background = colorFor(chain.name);
-      var chainLabel = document.createElement("span");
-      chainLabel.className = "verdict-chain";
-      chainLabel.textContent = chain.name;
-      var text = document.createElement("span");
-      text.className = "verdict-text";
-
-      if (craftRoutes.length === 0) {
-        verdict.className = "verdict";
-        text.textContent = "Not enough price data to compare crafting routes.";
-      } else {
-        var cheapest = craftRoutes.reduce(function (a, b) { return b.cost < a.cost ? b : a; });
-        var savings = buyDirect.cost - cheapest.cost;
-        var pct = (savings / buyDirect.cost) * 100;
-        var thinNote = cheapest.volume !== undefined && cheapest.volume < THIN_VOLUME
-          ? " (thin data, n=" + cheapest.volume + " — verify before relying on this)"
-          : "";
-        if (savings > 0) {
-          verdict.className = "verdict craft-wins";
-          text.textContent = "Crafting beats buying by " + fmt(Math.round(savings)) + " mesos (" + fmt(Math.round(pct * 10) / 10) + "% cheaper)" + thinNote + ".";
-        } else {
-          verdict.className = "verdict buy-wins";
-          text.textContent = "Buying Advanced directly beats crafting — cheapest craft route costs " + fmt(Math.round(-savings)) + " more" + thinNote + ".";
-        }
+      var buyDirect = routeData["advanced"];
+      if (!buyDirect) {
+        rows.push({ chain: chain, noData: true });
+        return;
       }
 
-      verdict.appendChild(dot);
-      verdict.appendChild(chainLabel);
-      verdict.appendChild(text);
-      verdictGrid.appendChild(verdict);
+      var craftRoutes = ["ore", "basic", "intermediate"]
+        .map(function (key) { return { key: key, entry: routeData[key] }; })
+        .filter(function (r) { return r.entry !== null; });
+
+      if (craftRoutes.length === 0) {
+        rows.push({ chain: chain, noCraftData: true, buyDirect: buyDirect });
+        return;
+      }
+
+      var best = craftRoutes.reduce(function (a, b) { return b.entry.cost < a.entry.cost ? b : a; });
+      var route = routes.filter(function (r) { return r.key === best.key; })[0];
+      var revenue = buyDirect.cost * (1 - tax);
+      var profit = revenue - best.entry.cost;
+      var pct = (profit / best.entry.cost) * 100;
+      var ceiling = buyDirect.cost / route.qty;
+
+      rows.push({
+        chain: chain,
+        routeLabel: route.label,
+        routeKey: best.key,
+        cost: best.entry.cost,
+        volume: best.entry.volume,
+        ceiling: ceiling,
+        buyDirectCost: buyDirect.cost,
+        profit: profit,
+        pct: pct
+      });
+    });
+
+    rows.sort(function (a, b) {
+      if (a.noData || a.noCraftData) return 1;
+      if (b.noData || b.noCraftData) return -1;
+      return b.pct - a.pct;
+    });
+
+    rows.forEach(function (row) {
+      var tr = document.createElement("tr");
+
+      var chainTd = document.createElement("td");
+      var chainCell = document.createElement("div");
+      chainCell.className = "item-cell";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = colorFor(row.chain.name);
+      chainCell.appendChild(dot);
+      var nameSpan = document.createElement("span");
+      nameSpan.textContent = row.chain.name;
+      chainCell.appendChild(nameSpan);
+      chainTd.appendChild(chainCell);
+      tr.appendChild(chainTd);
+
+      if (row.noData) {
+        var emptyTd = document.createElement("td");
+        emptyTd.colSpan = 5;
+        emptyTd.className = "arb-empty";
+        emptyTd.textContent = "Enter an Advanced price above to compare.";
+        tr.appendChild(emptyTd);
+        body.appendChild(tr);
+        return;
+      }
+      if (row.noCraftData) {
+        var emptyTd2 = document.createElement("td");
+        emptyTd2.colSpan = 5;
+        emptyTd2.className = "arb-empty";
+        emptyTd2.textContent = "Enter an Ore, Basic, or Intermediate price above to compare crafting routes.";
+        tr.appendChild(emptyTd2);
+        body.appendChild(tr);
+        return;
+      }
+
+      var routeTd = document.createElement("td");
+      routeTd.className = "strategy-text";
+      routeTd.textContent = row.routeLabel;
+      var ceilingTag = document.createElement("span");
+      ceilingTag.className = "liquidity-tag";
+      ceilingTag.textContent = "buy under " + fmt(Math.round(row.ceiling)) + "/unit";
+      routeTd.appendChild(ceilingTag);
+      if (row.volume !== undefined && row.volume < THIN_VOLUME) {
+        var thinTag = document.createElement("span");
+        thinTag.className = "liquidity-tag thin";
+        thinTag.textContent = "⚠ thin data, n=" + row.volume;
+        routeTd.appendChild(thinTag);
+      }
+      tr.appendChild(routeTd);
+
+      var costTd = document.createElement("td");
+      costTd.className = "num-cell";
+      costTd.textContent = fmt(Math.round(row.cost));
+      tr.appendChild(costTd);
+
+      var buyTd = document.createElement("td");
+      buyTd.className = "num-cell";
+      buyTd.textContent = fmt(Math.round(row.buyDirectCost));
+      tr.appendChild(buyTd);
+
+      var sign = row.profit >= 0 ? "pos" : "neg";
+      var profitTd = document.createElement("td");
+      profitTd.className = "num-cell " + sign;
+      profitTd.textContent = (row.profit >= 0 ? "+" : "") + fmt(Math.round(row.profit));
+      tr.appendChild(profitTd);
+
+      var pctTd = document.createElement("td");
+      pctTd.className = "pct-cell " + sign;
+      pctTd.textContent = (row.pct >= 0 ? "+" : "") + fmt(Math.round(row.pct * 10) / 10) + "%";
+      if (row.pct >= OUTLIER_PCT) {
+        var flag = document.createElement("div");
+        flag.className = "outlier-flag";
+        flag.textContent = "⚠ verify no hidden per-attempt cost";
+        pctTd.appendChild(flag);
+      }
+      tr.appendChild(pctTd);
+
+      body.appendChild(tr);
     });
   }
 
@@ -1737,6 +1836,11 @@
     renderArbitrage();
   });
 
+  document.getElementById("crystalTaxInput").addEventListener("input", function () {
+    try { localStorage.setItem(CRYSTAL_TAX_STORAGE_KEY, document.getElementById("crystalTaxInput").value); } catch (e) {}
+    renderCrystalTable();
+  });
+
   document.getElementById("pricesAsOf").addEventListener("input", function () {
     try { localStorage.setItem(ASOF_STORAGE_KEY, document.getElementById("pricesAsOf").value); } catch (e) {}
   });
@@ -1755,6 +1859,7 @@
   saveCrystalVolumes();
   document.getElementById("pricesAsOf").value = loadAsOf();
   document.getElementById("taxInput").value = loadTax();
+  document.getElementById("crystalTaxInput").value = loadCrystalTax();
   render();
 })();
 </script>
