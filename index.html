@@ -825,6 +825,51 @@
     <button id="resetBtn" class="ghost-btn small" type="button">Reset to defaults</button>
   </section>
 
+  <section class="scrollcalc card">
+    <h2>Slot Scrolling: Preserve vs Restore</h2>
+    <p class="sub" style="margin-bottom: 4px;">Two ways to keep a slot alive while you scroll it. <strong>Preserve with White Scroll</strong>: pay 1 WS per attempt to protect the slot from being consumed on a fail &mdash; each fail also stacks a pity bonus onto the next attempt, capped, resetting the moment you pass. <strong>Restore with Clean Slate</strong>: attempt at the flat base rate with no pity, and when a fail consumes the slot, buy it back with a 90%-sum combo of Clean Slate Scrolls, priced here off whichever real 10%/20% combo is cheapest right now &mdash; not just the fixed 2 WS ratio. Both columns compare only the WS-economy overhead; the underlying scroll itself costs the same either way and isn't included.</p>
+
+    <div class="subsection">
+      <div class="subsection-head">
+        <span class="subsection-label">Assumptions</span>
+      </div>
+      <div class="price-grid">
+        <div class="price-field">
+          <label for="scrollBaseChance">Base success chance</label>
+          <input type="number" id="scrollBaseChance" value="15" min="0.1" max="100" step="any">
+        </div>
+        <div class="price-field">
+          <label for="scrollPityStep">Pity per fail (WS method only)</label>
+          <input type="number" id="scrollPityStep" value="1.5" min="0" max="100" step="any">
+        </div>
+        <div class="price-field">
+          <label for="scrollPityCap">Pity cap</label>
+          <input type="number" id="scrollPityCap" value="30" min="0" max="100" step="any">
+        </div>
+      </div>
+    </div>
+
+    <div class="subsection">
+      <div class="subsection-head">
+        <span class="subsection-label">Results</span>
+      </div>
+      <div class="table-scroll">
+        <table id="scrollCalcTable">
+          <thead>
+            <tr>
+              <th>Strategy</th>
+              <th>Expected attempts</th>
+              <th>Cost basis</th>
+              <th>Expected cost per landed slot</th>
+            </tr>
+          </thead>
+          <tbody id="scrollCalcBody"></tbody>
+        </table>
+      </div>
+      <div class="verdict-grid" id="scrollCalcVerdict"></div>
+    </div>
+  </section>
+
   <p class="foot">Saved locally in this browser &mdash; private to this device, nothing leaves your machine.</p>
 </div>
 
@@ -852,6 +897,10 @@
   var ASOF_STORAGE_KEY = "wsExchangePricesAsOf_v1";
   var TAX_STORAGE_KEY = "wsExchangeTax_v1";
   var CRYSTAL_TAX_STORAGE_KEY = "wsExchangeCrystalTax_v1";
+  var SCROLL_CALC_STORAGE_KEY = "wsExchangeScrollCalc_v1";
+  var DEFAULT_SCROLL_BASE = 15;
+  var DEFAULT_SCROLL_PITY_STEP = 1.5;
+  var DEFAULT_SCROLL_PITY_CAP = 30;
   var SNAPSHOT_STORAGE_KEY = "wsExchangePricesSnapshot_v1";
   var VOL_SNAPSHOT_STORAGE_KEY = "wsExchangeVolumesSnapshot_v1";
 
@@ -1192,6 +1241,30 @@
     return 2;
   }
 
+  function loadScrollCalcSettings() {
+    try {
+      var raw = localStorage.getItem(SCROLL_CALC_STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        return {
+          base: isFinite(parsed.base) ? parsed.base : DEFAULT_SCROLL_BASE,
+          step: isFinite(parsed.step) ? parsed.step : DEFAULT_SCROLL_PITY_STEP,
+          cap: isFinite(parsed.cap) ? parsed.cap : DEFAULT_SCROLL_PITY_CAP
+        };
+      }
+    } catch (e) {}
+    return { base: DEFAULT_SCROLL_BASE, step: DEFAULT_SCROLL_PITY_STEP, cap: DEFAULT_SCROLL_PITY_CAP };
+  }
+
+  function saveScrollCalcSettings() {
+    var settings = {
+      base: parseFloat(document.getElementById("scrollBaseChance").value),
+      step: parseFloat(document.getElementById("scrollPityStep").value),
+      cap: parseFloat(document.getElementById("scrollPityCap").value)
+    };
+    try { localStorage.setItem(SCROLL_CALC_STORAGE_KEY, JSON.stringify(settings)); } catch (e) {}
+  }
+
   // Reconciles saved prices against the DEFAULT_PRICES baked into this
   // publish. Without this, a scheduled hourly republish would update the
   // embedded defaults but every returning visitor's localStorage would
@@ -1254,6 +1327,55 @@
     return String(rounded);
   }
 
+  // Expected number of attempts to land 1 success when each fail raises
+  // the NEXT attempt's chance by stepPct, capped at capPct total bonus,
+  // and success resets nothing (we only need the first pass). Computed as
+  // E[N] = sum of P(still going into attempt k), which is exact and only
+  // needs finitely many ramp-up terms (capK) plus a closed-form geometric
+  // tail once the cap is reached and the chance goes flat.
+  function expectedAttemptsWithPity(basePct, stepPct, capPct) {
+    var base = Math.max(0.0001, basePct / 100);
+    var step = Math.max(0, stepPct / 100);
+    if (step === 0) return 1 / base;
+    var capK = Math.max(0, Math.round((Math.max(0, capPct) / 100) / step));
+    var E = 0, s = 1; // s = P(no success in attempts seen so far)
+    for (var k = 0; k < capK; k++) {
+      var p = Math.min(base + step * k, 1);
+      E += s;
+      s *= (1 - p);
+    }
+    var pCap = Math.min(base + step * capK, 1);
+    E += s / pCap; // geometric tail at the capped rate
+    return E;
+  }
+
+  // Flat-rate (no pity) expected FAILURES before a success -- each one
+  // consumes the slot under the Clean Slate strategy and needs a restore.
+  function expectedFailuresFlat(basePct) {
+    var base = Math.max(0.0001, basePct / 100);
+    return (1 / base) - 1;
+  }
+
+  // Cheapest way to assemble an exact 90%-sum Clean Slate combo (worth 2
+  // WS at the fixed barter ratio) from real market prices. 20*a + 10*b =
+  // 90 has exactly 5 whole-number solutions (a = 0..4, the same 5 combos
+  // confirmed earlier for the barter ratio); since the two scrolls don't
+  // trade at exactly 2x each other's price per %-point, the cheapest one
+  // isn't always the obvious "just use 9x 10%" pick.
+  function cheapestCssRestore() {
+    var p10 = prices["Clean Slate Scroll 10%"];
+    var p20 = prices["Clean Slate Scroll 20%"];
+    var best = null;
+    for (var a = 0; a <= 4; a++) {
+      var b = 9 - 2 * a;
+      if (a > 0 && !p20) continue;
+      if (b > 0 && !p10) continue;
+      var cost = a * (p20 || 0) + b * (p10 || 0);
+      if (best === null || cost < best.cost) best = { cost: cost, a: a, b: b };
+    }
+    return best;
+  }
+
   // Deterministic color per item name, tuned to sit legibly on both themes.
   function colorFor(name) {
     var h = 0;
@@ -1277,6 +1399,7 @@
     renderArbitrage();
     renderCrystalPriceGrid();
     renderCrystalTable();
+    renderScrollCalc();
   }
 
   function renderSelect() {
@@ -1816,6 +1939,105 @@
     });
   }
 
+  function renderScrollCalc() {
+    var body = document.getElementById("scrollCalcBody");
+    var verdictEl = document.getElementById("scrollCalcVerdict");
+    body.innerHTML = "";
+    verdictEl.innerHTML = "";
+
+    var basePct = parseFloat(document.getElementById("scrollBaseChance").value);
+    var stepPct = parseFloat(document.getElementById("scrollPityStep").value);
+    var capPct = parseFloat(document.getElementById("scrollPityCap").value);
+    if (!isFinite(basePct) || basePct <= 0) basePct = DEFAULT_SCROLL_BASE;
+    if (!isFinite(stepPct) || stepPct < 0) stepPct = 0;
+    if (!isFinite(capPct) || capPct < 0) capPct = 0;
+
+    var wsPrice = prices[WS];
+    var attemptsA = expectedAttemptsWithPity(basePct, stepPct, capPct);
+    var costA = wsPrice ? attemptsA * wsPrice : null;
+
+    var failuresB = expectedFailuresFlat(basePct);
+    var attemptsB = failuresB + 1;
+    var restore = cheapestCssRestore();
+    var costB = restore ? failuresB * restore.cost : null;
+
+    function addRow(label, attempts, basisText, cost) {
+      var tr = document.createElement("tr");
+
+      var nameTd = document.createElement("td");
+      var cell = document.createElement("div");
+      cell.className = "item-cell";
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = colorFor(label);
+      cell.appendChild(dot);
+      var span = document.createElement("span");
+      span.textContent = label;
+      cell.appendChild(span);
+      nameTd.appendChild(cell);
+      tr.appendChild(nameTd);
+
+      var attemptsTd = document.createElement("td");
+      attemptsTd.className = "num-cell";
+      attemptsTd.textContent = fmt(Math.round(attempts * 1000) / 1000);
+      tr.appendChild(attemptsTd);
+
+      var basisTd = document.createElement("td");
+      basisTd.className = "strategy-text";
+      basisTd.textContent = basisText;
+      tr.appendChild(basisTd);
+
+      var costTd = document.createElement("td");
+      costTd.className = "num-cell";
+      costTd.textContent = cost !== null ? fmt(Math.round(cost)) : "enter prices above";
+      tr.appendChild(costTd);
+
+      body.appendChild(tr);
+    }
+
+    addRow(
+      "Preserve with White Scroll",
+      attemptsA,
+      wsPrice ? "1 WS/attempt = " + fmt(Math.round(wsPrice)) + " mesos" : "enter White Scroll price above",
+      costA
+    );
+
+    var restoreBasis = restore
+      ? (restore.a ? fmt(restore.a) + "× 20% + " : "") + fmt(restore.b) + "× 10% = " + fmt(Math.round(restore.cost)) + " mesos/restore"
+      : "enter Clean Slate Scroll prices above";
+    addRow(
+      "Restore with Clean Slate (" + fmt(Math.round(failuresB * 100) / 100) + " restores)",
+      attemptsB,
+      restoreBasis,
+      costB
+    );
+
+    if (costA !== null && costB !== null) {
+      var aWins = costA <= costB;
+      var cheaper = aWins ? "Preserve with White Scroll" : "Restore with Clean Slate";
+      var diff = Math.abs(costA - costB);
+      var pricier = aWins ? costB : costA;
+      var pct = pricier > 0 ? (diff / pricier) * 100 : 0;
+
+      var verdict = document.createElement("div");
+      verdict.className = "verdict " + (aWins ? "craft-wins" : "buy-wins");
+      var vdot = document.createElement("span");
+      vdot.className = "dot";
+      vdot.style.background = colorFor(cheaper);
+      verdict.appendChild(vdot);
+      var chain = document.createElement("span");
+      chain.className = "verdict-chain";
+      chain.textContent = cheaper;
+      verdict.appendChild(chain);
+      var text = document.createElement("span");
+      text.className = "verdict-text";
+      text.textContent = "is cheaper by " + fmt(Math.round(diff)) + " mesos (" +
+        fmt(Math.round(pct * 10) / 10) + "%) per slot landed, at current prices.";
+      verdict.appendChild(text);
+      verdictEl.appendChild(verdict);
+    }
+  }
+
   function startEdit(idx) {
     var r = rates[idx];
     editingIndex = idx;
@@ -1911,6 +2133,13 @@
     renderCrystalTable();
   });
 
+  ["scrollBaseChance", "scrollPityStep", "scrollPityCap"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", function () {
+      saveScrollCalcSettings();
+      renderScrollCalc();
+    });
+  });
+
   document.getElementById("pricesAsOf").addEventListener("input", function () {
     try { localStorage.setItem(ASOF_STORAGE_KEY, document.getElementById("pricesAsOf").value); } catch (e) {}
   });
@@ -1930,6 +2159,10 @@
   document.getElementById("pricesAsOf").value = loadAsOf();
   document.getElementById("taxInput").value = loadTax();
   document.getElementById("crystalTaxInput").value = loadCrystalTax();
+  var scrollCalcSettings = loadScrollCalcSettings();
+  document.getElementById("scrollBaseChance").value = scrollCalcSettings.base;
+  document.getElementById("scrollPityStep").value = scrollCalcSettings.step;
+  document.getElementById("scrollPityCap").value = scrollCalcSettings.cap;
   render();
 })();
 </script>
