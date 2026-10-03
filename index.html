@@ -917,31 +917,31 @@
   // Manual on purpose -- the artifact sandbox can't fetch dreamms.gg
   // directly (CSP), so prices are typed in rather than live.
   var DEFAULT_PRICES = {
-    "White Scroll": 36592874,
-    "Tiger Talon": 176317038,
-    "Ssiws Cheese": 1723900,
-    "Eye of Fire": 4413437,
-    "Onyx Apple": 5188538,
-    "Subani's Mystic Cauldron": 3508744,
-    "Naricain's Demon Elixir": 10254725,
-    "Rock of Time": 65907861,
-    "Clean Slate Scroll 10%": 7156553,
-    "Clean Slate Scroll 20%": 15559116
+    "White Scroll": 36210028,
+    "Tiger Talon": 175775491,
+    "Ssiws Cheese": 1907380,
+    "Eye of Fire": 4475974,
+    "Onyx Apple": 5379805,
+    "Subani's Mystic Cauldron": 3832156,
+    "Naricain's Demon Elixir": 10587495,
+    "Rock of Time": 65705876,
+    "Clean Slate Scroll 10%": 7104653,
+    "Clean Slate Scroll 20%": 14633446
   };
   // 7-day sales counts (liquidity), same snapshot date as DEFAULT_PRICES.
   var DEFAULT_VOLUMES = {
-    "White Scroll": 444,
-    "Tiger Talon": 21,
-    "Ssiws Cheese": 80,
-    "Eye of Fire": 132,
-    "Onyx Apple": 180,
-    "Subani's Mystic Cauldron": 245,
-    "Naricain's Demon Elixir": 160,
-    "Rock of Time": 122,
-    "Clean Slate Scroll 10%": 159,
-    "Clean Slate Scroll 20%": 188
+    "White Scroll": 512,
+    "Tiger Talon": 17,
+    "Ssiws Cheese": 101,
+    "Eye of Fire": 109,
+    "Onyx Apple": 181,
+    "Subani's Mystic Cauldron": 220,
+    "Naricain's Demon Elixir": 137,
+    "Rock of Time": 71,
+    "Clean Slate Scroll 10%": 99,
+    "Clean Slate Scroll 20%": 116
   };
-  var DEFAULT_ASOF = "Sep 15, 2026";
+  var DEFAULT_ASOF = "Oct 3, 2026";
   var OUTLIER_PCT = 50;
 
   // Crystal crafting -- a separate mesos-only calculator, no WS involved.
@@ -1068,62 +1068,62 @@
   var THIN_VOLUME = 5; // routes priced on fewer than this many 7d sales get flagged
 
   var DEFAULT_CRYSTAL_PRICES = {
-    "Power Crystal Ore": 142486,
+    "Power Crystal Ore": 124889,
     "Basic Power Crystal": 685999,
     "Intermediate Power Crystal": 5114117,
-    "Advanced Power Crystal": 46916772,
-    "Diamond Ore": 8094,
+    "Advanced Power Crystal": 48751589,
+    "Diamond Ore": 9878,
     "Basic Diamond": 500000,
     "Intermediate Diamond": 49000,
-    "Advanced Diamond": 2304437,
-    "Black Crystal Ore": 40144,
+    "Advanced Diamond": 5096795,
+    "Black Crystal Ore": 27987,
     "Basic Black Crystal": 98000,
     "Intermediate Black Crystal": 4900000,
-    "Advanced Black Crystal": 23120727,
-    "DEX Crystal Ore": 36511,
+    "Advanced Black Crystal": 22949646,
+    "DEX Crystal Ore": 52393,
     "Basic DEX Crystal": 98000,
     "Intermediate DEX Crystal": 1470000,
-    "Advanced DEX Crystal": 20947897,
-    "LUK Crystal Ore": 103769,
+    "Advanced DEX Crystal": 23761404,
+    "LUK Crystal Ore": 141775,
     "Basic LUK Crystal": 293999,
     "Intermediate LUK Crystal": 4410000,
-    "Advanced LUK Crystal": 62286295,
-    "Wisdom Crystal Ore": 122569,
+    "Advanced LUK Crystal": 57561835,
+    "Wisdom Crystal Ore": 109320,
     "Basic Wisdom Crystal": 98000,
     "Intermediate Wisdom Crystal": 5559272,
-    "Advanced Wisdom Crystal": 52706331,
-    "Sapphire Ore": 31182,
+    "Advanced Wisdom Crystal": 57140603,
+    "Sapphire Ore": 7621,
     "Basic Sapphire": 147000,
-    "Advanced Sapphire": 1837500
+    "Advanced Sapphire": 1050094
   };
   var DEFAULT_CRYSTAL_VOLUMES = {
     "Power Crystal Ore": 17,
     "Basic Power Crystal": 1,
     "Intermediate Power Crystal": 5,
-    "Advanced Power Crystal": 110,
-    "Diamond Ore": 7,
+    "Advanced Power Crystal": 128,
+    "Diamond Ore": 5,
     "Basic Diamond": 1,
     "Intermediate Diamond": 1,
-    "Advanced Diamond": 34,
-    "Black Crystal Ore": 21,
+    "Advanced Diamond": 25,
+    "Black Crystal Ore": 17,
     "Basic Black Crystal": 1,
     "Intermediate Black Crystal": 1,
-    "Advanced Black Crystal": 173,
-    "DEX Crystal Ore": 33,
+    "Advanced Black Crystal": 136,
+    "DEX Crystal Ore": 39,
     "Basic DEX Crystal": 1,
     "Intermediate DEX Crystal": 4,
-    "Advanced DEX Crystal": 115,
-    "LUK Crystal Ore": 26,
+    "Advanced DEX Crystal": 102,
+    "LUK Crystal Ore": 33,
     "Basic LUK Crystal": 1,
     "Intermediate LUK Crystal": 3,
-    "Advanced LUK Crystal": 103,
-    "Wisdom Crystal Ore": 32,
+    "Advanced LUK Crystal": 97,
+    "Wisdom Crystal Ore": 16,
     "Basic Wisdom Crystal": 1,
     "Intermediate Wisdom Crystal": 2,
-    "Advanced Wisdom Crystal": 111,
-    "Sapphire Ore": 3,
+    "Advanced Wisdom Crystal": 92,
+    "Sapphire Ore": 1,
     "Basic Sapphire": 2,
-    "Advanced Sapphire": 3
+    "Advanced Sapphire": 5
   };
 
   var rates = [];
