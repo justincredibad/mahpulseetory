@@ -961,7 +961,7 @@
   </section>
 
   <section class="myshop card">
-    <h2>My Shop</h2>
+    <h2>My Scroll Store</h2>
     <p class="sub" style="margin-bottom: 4px;">Items currently listed, against their 7-day market average and sales count. &ldquo;vs avg&rdquo; is how far the listing price sits above (+) or below (&minus;) the average &mdash; far above average usually means it won't sell soon. Snapshot from <span id="shopAsOf"></span>.</p>
     <div class="table-scroll">
       <table>
@@ -2307,7 +2307,7 @@
 
   var SHOP_ASOF = "Oct 24, 2026";
   // [type, item, my listing price, 7d avg, 7d sales]
-  var SHOP_DATA = [["Mastery","Static Focus 40",31100000,17694445,2],["Mastery","Achilles 40",32200000,25126111,3],["Mastery","Dragon Strike 20",14400000,5934444,2],["Mastery","Snatch 20",15500000,7769222,2],["Mastery","Snatch 30",12200000,2640556,2],["Mastery","Dragon Strike 40",14400000,9800000,2],["Mastery","Bow Expert 40",186600000,132552382,7],["Mastery","Shadow Stars 40",77700000,32904861,8],["Mastery","Chain Lightning 40",12200000,4328333,4],["Mastery","Paralyze 40",33300000,1960000,4],["Scroll","Topwear for LUK 10%",1700000,98000,1],["Scroll","Topwear for STR 10%",1600000,294000,1],["Scroll","Topwear for STR 60%",288000,88709,4],["Scroll","Overall Armor for DEX 60%",99000,146012,15],["Scroll","Overall Armor for DEX 10%",8800000,6999250,36],["Scroll","Helmet for DEX 10%",8800000,2504560,22],["Scroll","Helmet for INT 10%",2400000,1837459,15],["Scroll","Earring for DEX 10%",3300000,539590,28],["Scroll","Eye Accessory for INT 10%",3300000,150402,2],["Scroll","Earring for LUK 10%",666000,633585,10],["Scroll","Overall Armor for STR 10%",4300000,2435844,5],["Scroll","Helmet for LUK 10%",8700000,5430116,6],["Scroll","Bottomwear for DEX 10%",999000,196000,1],["Scroll","Overall Armor for STR 15%",14400000,8221110,2],["Other","Subani's Mystic Cauldron",4800000,3956995,162]];
+  var SHOP_DATA = [["Mastery","Static Focus 40",31100000,17694445,2],["Mastery","Achilles 40",32200000,25126111,3],["Mastery","Dragon Strike 20",14400000,5934444,2],["Mastery","Snatch 20",15500000,7769222,2],["Mastery","Snatch 30",12200000,2640556,2],["Mastery","Dragon Strike 40",14400000,9800000,2],["Mastery","Bow Expert 40",186600000,132552382,7],["Mastery","Shadow Stars 40",77700000,32904861,8],["Mastery","Chain Lightning 40",12200000,4328333,4],["Mastery","Paralyze 40",33300000,1960000,4],["Skill","Full Metal Jacket",43300000,8820000,1],["Scroll","Topwear for LUK 10%",1700000,98000,1],["Scroll","Topwear for STR 10%",1600000,294000,1],["Scroll","Topwear for STR 60%",288000,88709,4],["Scroll","Overall Armor for DEX 60%",99000,146012,15],["Scroll","Overall Armor for DEX 10%",8800000,6999250,36],["Scroll","Helmet for DEX 10%",8800000,2504560,22],["Scroll","Helmet for INT 10%",2400000,1837459,15],["Scroll","Earring for DEX 10%",3300000,539590,28],["Scroll","Eye Accessory for INT 10%",3300000,150402,2],["Scroll","Earring for LUK 10%",666000,633585,10],["Scroll","Overall Armor for STR 10%",4300000,2435844,5],["Scroll","Helmet for LUK 10%",8700000,5430116,6],["Scroll","Bottomwear for DEX 10%",999000,196000,1],["Scroll","Overall Armor for STR 15%",14400000,8221110,2],["Other","Subani's Mystic Cauldron",4800000,3956995,162]];
 
   function renderShop() {
     var body = document.getElementById("shopBody");
@@ -2322,7 +2322,7 @@
         var htd = document.createElement("td");
         htd.colSpan = 5;
         htd.className = "subsection-label";
-        htd.textContent = d[0] === "Mastery" ? "Mastery books" : (d[0] === "Scroll" ? "Scrolls" : "Other");
+        htd.textContent = d[0] === "Mastery" ? "Mastery books" : (d[0] === "Skill" ? "Skill books" : (d[0] === "Scroll" ? "Scrolls" : "Other"));
         htr.appendChild(htd);
         body.appendChild(htr);
       }
